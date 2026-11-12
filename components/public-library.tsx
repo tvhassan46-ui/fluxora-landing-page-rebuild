@@ -86,6 +86,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const [fontSize, setFontSize] = useState(1.25)
   const [chapterIndex, setChapterIndex] = useState(0)
   const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle')
+  const [audioMessage, setAudioMessage] = useState('')
   const readerRef = useRef<HTMLElement>(null)
   const activeBook = books.find((book) => book.id === selection?.bookId)
   const activeEpisode = activeBook?.episodes.find((episode) => episode.id === selection?.episodeId)
@@ -108,6 +109,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     const firstEpisode = book.episodes[0]
     setChapterIndex(0)
     setAudioState('idle')
+    setAudioMessage('')
     setSelection({ bookId: book.id, episodeId: firstEpisode.id })
     window.requestAnimationFrame(() => readerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
@@ -115,11 +117,20 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   function selectEpisode(book: PublicBook, episodeId: string) {
     setChapterIndex(0)
     setAudioState('idle')
+    setAudioMessage('')
     setSelection({ bookId: book.id, episodeId })
   }
 
   function toggleAudio() {
-    if (typeof window === 'undefined' || !window.speechSynthesis || !currentChapter.length) return
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setAudioMessage('القراءة الصوتية غير مدعومة في هذا المتصفح.')
+      return
+    }
+
+    if (!currentChapter.length) {
+      setAudioMessage('حمّل الفصل أولًا ثم اضغط استمع.')
+      return
+    }
 
     if (audioState === 'playing') {
       window.speechSynthesis.pause()
@@ -134,11 +145,23 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     }
 
     window.speechSynthesis.cancel()
+    const voice = window.speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith('ar'))
     const utterance = new SpeechSynthesisUtterance(currentChapter.join('\n\n'))
-    utterance.lang = 'ar-SA'
+    utterance.voice = voice ?? null
+    utterance.lang = voice?.lang ?? 'ar-SA'
     utterance.rate = 0.92
-    utterance.onend = () => setAudioState('idle')
-    utterance.onerror = () => setAudioState('idle')
+    utterance.onstart = () => setAudioState('playing')
+    utterance.onend = () => {
+      setAudioState('idle')
+      setAudioMessage('')
+    }
+    utterance.onerror = (event) => {
+      setAudioState('idle')
+      if (event.error !== 'canceled' && event.error !== 'interrupted') {
+        setAudioMessage('تعذّر تشغيل الصوت. تحقق من تفعيل الصوت أو تثبيت صوت عربي في الجهاز.')
+      }
+    }
+    setAudioMessage(voice ? '' : 'لم يُعثر على صوت عربي مثبت؛ سيحاول المتصفح استخدام صوته الافتراضي.')
     window.speechSynthesis.speak(utterance)
     setAudioState('playing')
   }
@@ -217,7 +240,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <p>{activeBook.author} · {activeBook.genreLabel}</p>
               </div>
               <div className="reader-tools" aria-label="إعدادات القراءة">
-                <button className="audio-button" type="button" onClick={toggleAudio} aria-label={audioState === 'playing' ? 'إيقاف القراءة السمعية مؤقتًا' : audioState === 'paused' ? 'استئناف القراءة السمعية' : 'استمع إلى هذا الفصل'}>
+                <button className="audio-button" type="button" onClick={toggleAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? 'إيقاف القراءة السمعية مؤقتًا' : audioState === 'paused' ? 'استئناف القراءة السمعية' : 'استمع إلى هذا الفصل'}>
                   {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
                   {audioState === 'playing' ? 'إيقاف مؤقت' : audioState === 'paused' ? 'استئناف' : 'استمع'}
                 </button>
@@ -225,6 +248,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label="تكبير الخط">A+</button>
               </div>
             </div>
+            {audioMessage && <p className="audio-status" role="status">{audioMessage}</p>}
             {activeBook.episodes.length > 1 && (
               <nav className="episode-nav" aria-label={`فصول ${activeBook.title}`}>
                 {activeBook.episodes.map((episode, index) => (
@@ -237,7 +261,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             {chapters.length > 1 && (
               <nav className="episode-nav chapter-nav" aria-label={`فصول ${activeBook.title}`}>
                 {chapters.map((_, index) => (
-                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle') }}>
+                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle'); setAudioMessage('') }}>
                     <span>{activeBook.episodes.length > 1 ? activeEpisode.title : activeBook.title}</span>الفصل {String(index + 1).padStart(2, '0')}
                   </button>
                 ))}
