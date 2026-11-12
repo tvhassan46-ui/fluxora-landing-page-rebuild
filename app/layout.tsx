@@ -1,10 +1,11 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import './auth.css'
 
 export const metadata: Metadata = {
   title: 'Fluxora — Technology Crafted for All',
-  description: 'We create clear, intuitive, and accessible digital experiences shaped by real human behavior.',
+  description: 'Explore thoughtful digital products from Fluxora, including BookStore, Zantic, and Crona. Create an account or sign in to your workspace.',
   generator: 'v0.app',
   icons: {
     icon: [
