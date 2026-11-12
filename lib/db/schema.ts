@@ -1,4 +1,5 @@
-import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, check, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -45,3 +46,18 @@ export const verification = pgTable('verification', {
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow(),
 })
+
+export const quoteMessages = pgTable('quote_messages', {
+  id: text('id').primaryKey(),
+  roomId: text('room_id').notNull().default('quote-lounge'),
+  userId: text('user_id').notNull(),
+  userName: text('user_name').notNull(),
+  body: text('body').notNull().default(''),
+  mediaPath: text('media_path'),
+  mediaType: text('media_type'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('quote_messages_room_created_idx').on(table.roomId, table.createdAt.desc()),
+  index('quote_messages_user_created_idx').on(table.userId, table.createdAt.desc()),
+  check('quote_messages_content_check', sql`char_length(btrim(${table.body})) > 0 OR ${table.mediaPath} IS NOT NULL`),
+])

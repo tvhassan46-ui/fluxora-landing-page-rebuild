@@ -1,12 +1,17 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { cookies } from 'next/headers'
+import { Noto_Sans_Arabic } from 'next/font/google'
+import { LanguageProvider, type Locale } from '@/components/language-provider'
+
+const arabicFont = Noto_Sans_Arabic({ subsets: ['arabic'], weight: ['400', '500', '600', '700'], variable: '--font-arabic' })
 import './globals.css'
 import './auth.css'
 import './library.css'
 
 export const metadata: Metadata = {
   title: 'Hikaya — Books, Novels & Literary Quotes',
-  description: 'Discover Arabic books, novels, and literary quotes in one welcoming reading library.',
+  description: 'Discover Arabic books, novels, short stories, and literary quotes in one welcoming library.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -28,23 +33,25 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
+  colorScheme: 'dark',
+  themeColor: '#120400',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const savedLocale = (await cookies()).get('site_language')?.value
+  const initialLocale: Locale = savedLocale === 'ar' ? 'ar' : 'en'
+
   return (
-    <html lang="en">
+    <html lang={initialLocale} dir={initialLocale === 'ar' ? 'rtl' : 'ltr'} className={arabicFont.variable}>
       <body className="antialiased">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <LanguageProvider initialLocale={initialLocale}>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </LanguageProvider>
       </body>
     </html>
   )

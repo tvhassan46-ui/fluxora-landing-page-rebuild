@@ -6,8 +6,12 @@ import Image from 'next/image'
 import useSWR from 'swr'
 import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Headphones, Languages, Library, Pause, Play, RotateCw } from 'lucide-react'
 import { publicBooks, type PublicBook } from '@/lib/reader-catalog'
+import { LanguageSwitch } from '@/components/language-switch'
+import { useLanguage } from '@/components/language-provider'
+import { getLibraryCopy } from '@/lib/library-copy'
+import { bookTranslations } from '@/lib/reader-translations'
 
-type PublicLibraryProps = { collection: 'all' | 'novels' }
+type PublicLibraryProps = { collection: 'books' | 'novels' | 'stories' }
 type Selection = { bookId: string; episodeId: string }
 type ReaderResponse = {
   bookTitle: string
@@ -19,7 +23,7 @@ type ReaderResponse = {
 
 async function fetchReaderText(url: string): Promise<ReaderResponse> {
   const response = await fetch(url)
-  if (!response.ok) throw new Error('تعذّر تحميل النص الآن.')
+  if (!response.ok) throw new Error('Unable to load the text right now.')
   return response.json() as Promise<ReaderResponse>
 }
 
@@ -65,23 +69,29 @@ function splitReaderChapters(paragraphs: string[]): string[][] {
   return chapters
 }
 
-function BookCover({ book }: { book: PublicBook }) {
-  const initial = book.title.slice(0, 1)
+function BookCover({ book, locale }: { book: PublicBook; locale: 'en' | 'ar' }) {
+  const translated = locale === 'en' ? bookTranslations[book.id] : undefined
+  const title = translated?.title ?? book.title
+  const author = translated?.author ?? book.author
   return (
     <div className={`book-cover book-cover-${book.id}`}>
-      <Image src={book.coverImage} alt={`غلاف كتاب ${book.title}`} fill sizes="(max-width: 620px) 98px, (max-width: 850px) 120px, 145px" className="book-cover-image" />
+      <Image src={book.coverImage} alt={locale === 'ar' ? `غلاف كتاب ${title}` : `Cover of ${title}`} fill sizes="(max-width: 620px) 98px, (max-width: 850px) 120px, 145px" className="book-cover-image" />
       <span className="book-cover-frame" aria-hidden="true" />
-      <span className="book-cover-mark">{initial}</span>
-      <span className="book-cover-title">{book.title}</span>
-      <span className="book-cover-author">{book.author}</span>
+      <span className="book-cover-mark" aria-hidden="true">{title.slice(0, 1)}</span>
+      <span className="book-cover-title">{title}</span>
+      <span className="book-cover-author">{author}</span>
     </div>
   )
 }
 
 export function PublicLibrary({ collection }: PublicLibraryProps) {
+  const { locale } = useLanguage()
+  const copy = getLibraryCopy(locale)
   const books = collection === 'novels'
-    ? publicBooks.filter((book) => book.genre !== 'fables')
-    : publicBooks
+    ? publicBooks.filter((book) => book.genre === 'novel')
+    : collection === 'stories'
+      ? publicBooks.filter((book) => book.genre === 'story-collection' || book.genre === 'fables')
+      : publicBooks.filter((book) => book.genre === 'literary-journey')
   const [selection, setSelection] = useState<Selection | null>(null)
   const [fontSize, setFontSize] = useState(1.25)
   const [chapterIndex, setChapterIndex] = useState(0)
@@ -95,6 +105,9 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const chapterKeyRef = useRef<string | null>(null)
   const activeBook = books.find((book) => book.id === selection?.bookId)
   const activeEpisode = activeBook?.episodes.find((episode) => episode.id === selection?.episodeId)
+  const activeBookTranslation = activeBook && locale === 'en' ? bookTranslations[activeBook.id] : undefined
+  const activeBookTitle = activeBookTranslation?.title ?? activeBook?.title ?? ''
+  const activeEpisodeTitle = activeBookTranslation?.episodes[activeEpisode?.id ?? ''] ?? activeEpisode?.title ?? ''
   const readerKey = activeBook && activeEpisode
     ? `/api/library/${activeBook.id}?episode=${activeEpisode.id}`
     : null
@@ -161,14 +174,14 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
       const result = await response.json().catch(() => null) as { translation?: unknown } | null
 
       if (!response.ok || typeof result?.translation !== 'string') {
-        throw new Error('Translation request failed')
+        throw new Error(copy.translationFailed)
       }
 
       setTranslations((current) => ({ ...current, [requestedChapterKey]: result.translation as string }))
       if (chapterKeyRef.current === requestedChapterKey) setIsEnglish(true)
     } catch {
       if (chapterKeyRef.current === requestedChapterKey) {
-        setTranslationMessage('تعذّرت الترجمة الآن. حاول مرة أخرى بعد قليل.')
+        setTranslationMessage(copy.translateError)
       }
     } finally {
       setIsTranslating(false)
@@ -177,12 +190,12 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
   function toggleAudio() {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      setAudioMessage('القراءة الصوتية غير مدعومة في هذا المتصفح.')
+      setAudioMessage(copy.audioUnsupported)
       return
     }
 
     if (!currentChapter.length) {
-      setAudioMessage('حمّل الفصل أولًا ثم اضغط استمع.')
+      setAudioMessage(copy.loadBeforeAudio)
       return
     }
 
@@ -213,68 +226,74 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     utterance.onerror = (event) => {
       setAudioState('idle')
       if (event.error !== 'canceled' && event.error !== 'interrupted') {
-        setAudioMessage(`تعذّر تشغيل الصوت. تحقق من تفعيل الصوت أو تثبيت صوت ${isEnglish ? 'إنجليزي' : 'عربي'} في الجهاز.`)
+        setAudioMessage(copy.voiceError)
       }
     }
-    setAudioMessage(voice ? '' : `لم يُعثر على صوت ${isEnglish ? 'إنجليزي' : 'عربي'} مثبت؛ سيحاول المتصفح استخدام صوته الافتراضي.`)
+    setAudioMessage(voice ? '' : copy.voiceMissing.replace('{language}', isEnglish ? (locale === 'ar' ? 'إنجليزي' : 'English') : (locale === 'ar' ? 'عربي' : 'Arabic')))
     window.speechSynthesis.speak(utterance)
     setAudioState('playing')
   }
 
   return (
-    <main className="library-page" dir="rtl" lang="ar">
+    <main className="library-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label="العودة إلى Hikaya">
-          <span className="library-brand-mark" aria-hidden="true">H</span>
-          <span>Hikaya <i>قراءة</i></span>
+        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى حكاية' : 'Back to Hikaya'}>
+          <Image src="/hikaya-mark.svg" alt="" width={32} height={32} className="library-logo-mark" />
+          <span>Hikaya <i>{locale === 'ar' ? 'قراءة' : 'Reading'}</i></span>
         </Link>
-        <nav className="library-nav" aria-label="التنقل بين الصفحات">
-          <Link href="/library">المكتبة</Link>
-          <Link href="/novels">الروايات والحكايات</Link>
-          <Link href="/quotes">اقتباسات</Link>
+        <nav className="library-nav" aria-label={copy.nav.aria}>
+          <Link href="/library" aria-current={collection === 'books' ? 'page' : undefined}>{copy.nav.books}</Link>
+          <Link href="/novels" aria-current={collection === 'novels' ? 'page' : undefined}>{copy.nav.novels}</Link>
+          <Link href="/stories" aria-current={collection === 'stories' ? 'page' : undefined}>{copy.nav.stories}</Link>
+          <Link href="/quotes">{copy.nav.quotes}</Link>
         </nav>
-        <Link className="library-home-link" href="/">الرئيسية <ArrowLeft aria-hidden="true" /></Link>
+        <div className="library-header-actions"><LanguageSwitch /><Link className="library-home-link" href="/">{copy.homeLabel} <ArrowLeft aria-hidden="true" /></Link></div>
       </header>
 
       <section className="library-hero" aria-labelledby="library-title">
         <div className="library-hero-copy">
-          <span className="library-eyebrow"><Library aria-hidden="true" /> مكتبة مفتوحة للجميع</span>
-          <h1 id="library-title">حكايات عظيمة،<br /><em>وقراءة بلا حدود.</em></h1>
-          <p>اقرأ كتبًا تراثية فصلًا بعد فصل، واختر المقطع الذي تريده. النصوص مجانية وروابط مصادرها الأصلية متاحة مع كل كتاب.</p>
-          <a className="library-hero-cta" href="#book-collection">تصفّح الكتب <ArrowDown aria-hidden="true" /></a>
+          <span className="library-eyebrow"><Library aria-hidden="true" /> {copy.eyebrow}</span>
+          <h1 id="library-title">{copy.heroTitle[0]}<br /><em>{copy.heroTitle[1]}</em></h1>
+          <p>{copy.heroDescription}</p>
+          <a className="library-hero-cta" href="#book-collection">{copy.browseBooks} <ArrowDown aria-hidden="true" /></a>
         </div>
         <div className="library-hero-art" aria-hidden="true">
-          <div className="hero-book hero-book-back"><span>حكايات</span></div>
-          <div className="hero-book hero-book-front"><BookOpen /><strong>اقرأ<br />الحكاية</strong><small>نصوص تراثية مجانية</small></div>
+          {publicBooks.slice(0, 3).map((book, index) => <div className={`hero-orbit-cover hero-orbit-cover-${index + 1}`} key={book.id}><Image src={book.coverImage} alt="" fill sizes="110px" /></div>)}
+          <div className="hero-book hero-book-back"><span>{locale === 'ar' ? 'حكايات' : 'Stories'}</span></div>
+          <div className="hero-book hero-book-front"><BookOpen /><strong>{locale === 'ar' ? <>اقرأ<br />الحكاية</> : <>Read<br />the story</>}</strong><small>{locale === 'ar' ? 'نصوص تراثية مجانية' : 'Free classic texts'}</small></div>
           <span className="hero-orbit hero-orbit-one" /><span className="hero-orbit hero-orbit-two" />
         </div>
       </section>
 
       <section id="book-collection" className="book-collection" aria-labelledby="collection-title">
         <div className="library-section-heading">
-          <div><span className="library-eyebrow">اختيارات Hikaya</span><h2 id="collection-title">{collection === 'novels' ? 'روايات وحكايات' : 'ابدأ من هنا'}</h2></div>
-          <p>{collection === 'novels' ? 'أعمال روائية ورحلات تخييلية من التراث العربي، مع النص الأصلي ومصدره.' : 'من الرواية الفلسفية إلى حكايات الليالي والأمثال.'}</p>
+          <div><span className="library-eyebrow">{copy.sectionEyebrow}</span><h2 id="collection-title">{copy.sectionTitle[collection]}</h2></div>
+          <p>{copy.sectionDescription[collection]}</p>
         </div>
         <div className="book-grid">
-          {books.map((book, index) => (
-            <article className="library-book-card" key={book.id}>
-              <BookCover book={book} />
-              <div className="library-book-info">
-                <span className="book-index">{String(index + 1).padStart(2, '0')} / {book.genreLabel}</span>
-                <h3>{book.title}</h3>
-                <p className="book-byline">{book.author} <span aria-hidden="true">·</span> {book.period}</p>
-                <p className="book-description">{book.description}</p>
-                <div className="book-card-actions">
-                  <button type="button" className="read-book-button" onClick={() => openBook(book)}>
-                    <BookOpen aria-hidden="true" /> ابدأ القراءة
-                  </button>
-                  <a href={book.sourceUrl} target="_blank" rel="noreferrer" aria-label={`فتح مصدر ${book.title} على ويكي مصدر`}>
-                    المصدر <ExternalLink aria-hidden="true" />
-                  </a>
+          {books.map((book, index) => {
+            const translated = locale === 'en' ? bookTranslations[book.id] : undefined
+            const title = translated?.title ?? book.title
+            return (
+              <article className="library-book-card" key={book.id}>
+                <BookCover book={book} locale={locale} />
+                <div className="library-book-info">
+                  <span className="book-index">{copy.bookNumber} {String(index + 1).padStart(2, '0')} / {translated?.genreLabel ?? book.genreLabel}</span>
+                  <h3>{title}</h3>
+                  <p className="book-byline"><span>{translated?.author ?? book.author}</span><span aria-hidden="true">·</span><span>{translated?.period ?? book.period}</span></p>
+                  <p className="book-description">{translated?.description ?? book.description}</p>
+                  <div className="book-card-actions">
+                    <button type="button" className="read-book-button" onClick={() => openBook(book)}>
+                      <BookOpen aria-hidden="true" /> {copy.beginReading}
+                    </button>
+                    <a href={book.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${copy.openSource} ${title}`}>
+                      {copy.originalSource} <ExternalLink aria-hidden="true" />
+                    </a>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            )
+          })}
         </div>
       </section>
 
@@ -282,65 +301,66 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
         {!activeBook || !activeEpisode ? (
           <div className="reader-empty">
             <span className="reader-empty-icon"><BookOpen aria-hidden="true" /></span>
-            <p className="library-eyebrow">مساحتك الهادئة للقراءة</p>
-            <h2 id="reader-title">اختر كتابًا لتبدأ</h2>
-            <p>اضغط «ابدأ القراءة» لتصفح فصول الكتاب واحدًا تلو الآخر.</p>
+            <p className="library-eyebrow">{copy.readerSpace}</p>
+            <h2 id="reader-title">{copy.chooseBook}</h2>
+            <p>{copy.chooseBookHint}</p>
           </div>
         ) : (
           <div className="reader-paper">
             <div className="reader-heading">
               <div>
-                <span className="reader-kicker">{activeBook.title} <span aria-hidden="true">/</span> {activeEpisode.title}</span>
-                <h2 id="reader-title">{activeBook.episodes.length > 1 ? activeEpisode.title : `الفصل ${chapterIndex + 1}`}</h2>
-                <p>{activeBook.author} · {activeBook.genreLabel}</p>
+                <span className="reader-kicker">{activeBookTitle} <span aria-hidden="true">/</span> {activeEpisodeTitle}</span>
+                <h2 id="reader-title">{activeBook.episodes.length > 1 ? activeEpisodeTitle : `${copy.chapter} ${chapterIndex + 1}`}</h2>
+                <p>{activeBookTranslation?.author ?? activeBook.author} · {activeBookTranslation?.genreLabel ?? activeBook.genreLabel}</p>
               </div>
-              <div className="reader-tools" aria-label="إعدادات القراءة">
-                <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? 'عرض النص العربي' : 'ترجمة هذا الفصل إلى الإنجليزية'}>
-                  <Languages aria-hidden="true" />{isTranslating ? 'جارٍ الترجمة…' : isEnglish ? 'عرض العربية' : 'ترجم للإنجليزية'}
+              <div className="reader-tools" aria-label={copy.readerSettings}>
+                <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? copy.showArabic : copy.translate}>
+                  <Languages aria-hidden="true" />{isTranslating ? copy.translating : isEnglish ? copy.showArabic : copy.translate}
                 </button>
-                <button className="audio-button" type="button" onClick={toggleAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? 'إيقاف القراءة السمعية مؤقتًا' : audioState === 'paused' ? 'استئناف القراءة السمعية' : 'استمع إلى هذا الفصل'}>
+                <button className="audio-button" type="button" onClick={toggleAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? copy.pause : audioState === 'paused' ? copy.resume : copy.listen}>
                   {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
-                  {audioState === 'playing' ? 'إيقاف مؤقت' : audioState === 'paused' ? 'استئناف' : 'استمع'}
+                  {audioState === 'playing' ? copy.pauseLabel : audioState === 'paused' ? copy.resumeLabel : copy.listenLabel}
                 </button>
-                <button type="button" onClick={() => setFontSize((size) => Math.max(1, +(size - 0.1).toFixed(1)))} aria-label="تصغير الخط">A−</button>
-                <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label="تكبير الخط">A+</button>
+                <button type="button" onClick={() => setFontSize((size) => Math.max(1, +(size - 0.1).toFixed(1)))} aria-label={copy.decreaseFont}>A−</button>
+                <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label={copy.increaseFont}>A+</button>
               </div>
             </div>
             {translationMessage && <p className="audio-status" role="alert">{translationMessage}</p>}
             {audioMessage && <p className="audio-status" role="status">{audioMessage}</p>}
             {activeBook.episodes.length > 1 && (
-              <nav className="episode-nav" aria-label={`فصول ${activeBook.title}`}>
+              <nav className="episode-nav" aria-label={`${copy.chapters} ${activeBookTitle}`}>
                 {activeBook.episodes.map((episode, index) => (
                   <button key={episode.id} type="button" className={episode.id === activeEpisode.id ? 'is-selected' : ''} aria-pressed={episode.id === activeEpisode.id} onClick={() => selectEpisode(activeBook, episode.id)}>
-                    <span>الفصل {String(index + 1).padStart(2, '0')}</span>{episode.title}
+                    <span>{copy.chapter} {String(index + 1).padStart(2, '0')}</span>{activeBookTranslation?.episodes[episode.id] ?? episode.title}
                   </button>
                 ))}
               </nav>
             )}
             {chapters.length > 1 && (
-              <nav className="episode-nav chapter-nav" aria-label={`فصول ${activeBook.title}`}>
+              <nav className="episode-nav chapter-nav" aria-label={`${copy.chapters} ${activeBookTitle}`}>
                 {chapters.map((_, index) => (
                   <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle'); setAudioMessage(''); setIsEnglish(false); setTranslationMessage('') }}>
-                    <span>{activeBook.episodes.length > 1 ? activeEpisode.title : activeBook.title}</span>الفصل {String(index + 1).padStart(2, '0')}
+                    <span>{activeBook.episodes.length > 1 ? activeEpisodeTitle : activeBookTitle}</span>{copy.chapter} {String(index + 1).padStart(2, '0')}
                   </button>
                 ))}
               </nav>
             )}
-            {isLoading && <div className="reader-status" role="status">جارٍ تحميل الفصل من ويكي مصدر…</div>}
+            {isLoading && <div className="reader-status" role="status">{copy.loadingChapter}</div>}
             {error && (
               <div className="reader-error" role="alert">
-                <p>لم نتمكن من تحميل النص الآن. يمكنك إعادة المحاولة أو فتح النسخة الأصلية.</p>
-                <button type="button" onClick={() => void mutate()}><RotateCw aria-hidden="true" /> أعد المحاولة</button>
+                <p>{copy.loadError}</p>
+                <button type="button" onClick={() => void mutate()}><RotateCw aria-hidden="true" /> {copy.retry}</button>
               </div>
             )}
             {data && !isLoading && (
               <>
                 <div className="reader-text" dir={isEnglish ? 'ltr' : 'rtl'} lang={isEnglish ? 'en' : 'ar'} aria-live="polite" style={{ fontSize: `${fontSize}rem` }}>
+                  <p className="reader-language-note">{isEnglish ? (locale === 'ar' ? 'الترجمة الإنجليزية' : 'English translation') : copy.originalArabic}</p>
                   {displayedParagraphs.map((paragraph, index) => <p key={`${chapterIndex}-${isEnglish ? 'en' : 'ar'}-${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
                 </div>
                 <footer className="reader-source">
-                  <span>النص متاح مجانًا عبر ويكي مصدر. انسب القراءة إلى المصدر الأصلي.</span>
-                  <a href={data.sourceUrl} target="_blank" rel="noreferrer">{data.sourceTitle} <ExternalLink aria-hidden="true" /></a>
+                  <span>{copy.sourceDisclosure}</span>
+                  <a href={data.sourceUrl} target="_blank" rel="noreferrer">{locale === 'ar' ? data.sourceTitle : copy.originalSource} <ExternalLink aria-hidden="true" /></a>
                 </footer>
               </>
             )}
@@ -350,8 +370,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
       <footer className="library-footer">
         <Link href="/">Hikaya</Link>
-        <span>المعرفة أجمل حين تكون متاحة للجميع.</span>
-        <Link href="/quotes">إلى الاقتباسات <ArrowRight aria-hidden="true" /></Link>
+        <span>{copy.footer}</span>
+        <Link href="/quotes">{copy.moreQuotes} <ArrowRight aria-hidden="true" /></Link>
       </footer>
     </main>
   )

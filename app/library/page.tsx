@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { PublicLibrary } from '@/components/public-library'
 
 export const metadata: Metadata = {
-  title: 'المكتبة المجانية | Hikaya',
-  description: 'اقرأ روايات وحكايات عربية تراثية مجانًا، فصلًا بعد فصل، مع روابط للمصادر الأصلية.',
+  title: 'Arabic Books | Hikaya',
+  description: 'Explore classic Arabic literary works and journeys outside the novel and story collections.'
 }
 
 export default function LibraryPage() {
-  return <PublicLibrary collection="all" />
+  return <PublicLibrary collection="books" />
 }
