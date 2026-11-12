@@ -224,9 +224,9 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   return (
     <main className="library-page" dir="rtl" lang="ar">
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label="العودة إلى Fluxora">
-          <span className="library-brand-mark" aria-hidden="true">F</span>
-          <span>Fluxora <i>قراءة</i></span>
+        <Link className="library-brand" href="/" aria-label="العودة إلى Hikaya">
+          <span className="library-brand-mark" aria-hidden="true">H</span>
+          <span>Hikaya <i>قراءة</i></span>
         </Link>
         <nav className="library-nav" aria-label="التنقل بين الصفحات">
           <Link href="/library">المكتبة</Link>
@@ -252,7 +252,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
       <section id="book-collection" className="book-collection" aria-labelledby="collection-title">
         <div className="library-section-heading">
-          <div><span className="library-eyebrow">اختيارات Fluxora</span><h2 id="collection-title">{collection === 'novels' ? 'روايات وحكايات' : 'ابدأ من هنا'}</h2></div>
+          <div><span className="library-eyebrow">اختيارات Hikaya</span><h2 id="collection-title">{collection === 'novels' ? 'روايات وحكايات' : 'ابدأ من هنا'}</h2></div>
           <p>{collection === 'novels' ? 'أعمال روائية ورحلات تخييلية من التراث العربي، مع النص الأصلي ومصدره.' : 'من الرواية الفلسفية إلى حكايات الليالي والأمثال.'}</p>
         </div>
         <div className="book-grid">
@@ -349,7 +349,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
       </section>
 
       <footer className="library-footer">
-        <Link href="/">Fluxora</Link>
+        <Link href="/">Hikaya</Link>
         <span>المعرفة أجمل حين تكون متاحة للجميع.</span>
         <Link href="/quotes">إلى الاقتباسات <ArrowRight aria-hidden="true" /></Link>
       </footer>

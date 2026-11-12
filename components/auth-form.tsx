@@ -46,12 +46,12 @@ export function AuthForm({ mode }: AuthFormProps) {
     <main className="auth-page">
       <div className="auth-orbit auth-orbit-one" aria-hidden="true" />
       <div className="auth-orbit auth-orbit-two" aria-hidden="true" />
-      <Link className="auth-brand" href="/" aria-label="Fluxora home"><span className="auth-brand-mark" aria-hidden="true">✳</span>Fluxora</Link>
+      <Link className="auth-brand" href="/" aria-label="Hikaya home"><span className="auth-brand-mark" aria-hidden="true">✳</span>Hikaya</Link>
       <section className="auth-card" aria-labelledby="auth-title">
-        <Link className="auth-back" href="/">← Back to Fluxora</Link>
-        <p className="auth-eyebrow">A more human digital world</p>
+        <Link className="auth-back" href="/">← Back to Hikaya</Link>
+        <p className="auth-eyebrow">A world of books, stories, and ideas</p>
         <h1 id="auth-title">{isSignUp ? 'Create your account' : 'Welcome back'}</h1>
-        <p className="auth-intro">{isSignUp ? 'Start exploring thoughtful tools made for real life.' : 'Sign in to continue to your Fluxora workspace.'}</p>
+        <p className="auth-intro">{isSignUp ? 'Create an account to explore classic books, novels, and literary quotes.' : 'Sign in to continue reading your books and stories.'}</p>
         <form className="auth-form" onSubmit={handleSubmit}>
           {isSignUp && (
             <div className="auth-field">
@@ -79,11 +79,11 @@ export function AuthForm({ mode }: AuthFormProps) {
           </button>
         </form>
         <p className="auth-switch">
-          {isSignUp ? 'Already have an account?' : 'New to Fluxora?'}{' '}
+          {isSignUp ? 'Already have an account?' : 'New to Hikaya?'}{' '}
           <Link href={isSignUp ? '/sign-in' : '/sign-up'}>{isSignUp ? 'Sign in' : 'Create an account'}</Link>
         </p>
       </section>
-      <p className="auth-footer">Thoughtful technology, made for people.</p>
+      <p className="auth-footer">A home for books, novels, and literary favorites.</p>
     </main>
   )
 }

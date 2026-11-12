@@ -20,7 +20,7 @@ export function QuoteLibrary() {
   return (
     <main className="library-page quote-page" dir="rtl" lang="ar">
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label="العودة إلى Fluxora"><span className="library-brand-mark" aria-hidden="true">F</span><span>Fluxora <i>مختارات</i></span></Link>
+        <Link className="library-brand" href="/" aria-label="العودة إلى Hikaya"><span className="library-brand-mark" aria-hidden="true">H</span><span>Hikaya <i>مختارات</i></span></Link>
         <nav className="library-nav" aria-label="التنقل بين الصفحات"><Link href="/library">المكتبة</Link><Link href="/novels">الروايات والحكايات</Link><Link href="/quotes" aria-current="page">اقتباسات</Link></nav>
         <Link className="library-home-link" href="/">الرئيسية <ArrowLeft aria-hidden="true" /></Link>
       </header>
@@ -43,7 +43,7 @@ export function QuoteLibrary() {
           </article>
         ))}
       </section>
-      <footer className="library-footer"><Link href="/">Fluxora</Link><span>البيت الشعري يعيش كلما وجد قارئًا.</span><Link href="/library">اكتشف الكتب <ArrowLeft aria-hidden="true" /></Link></footer>
+      <footer className="library-footer"><Link href="/">Hikaya</Link><span>البيت الشعري يعيش كلما وجد قارئًا.</span><Link href="/library">اكتشف الكتب <ArrowLeft aria-hidden="true" /></Link></footer>
     </main>
   )
 }

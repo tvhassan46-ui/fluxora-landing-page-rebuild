@@ -5,8 +5,8 @@ import './auth.css'
 import './library.css'
 
 export const metadata: Metadata = {
-  title: 'Fluxora — Technology Crafted for All',
-  description: 'Explore thoughtful digital products from Fluxora, including BookStore, Zantic, and Crona. Create an account or sign in to your workspace.',
+  title: 'Hikaya — Books, Novels & Literary Quotes',
+  description: 'Discover Arabic books, novels, and literary quotes in one welcoming reading library.',
   generator: 'v0.app',
   icons: {
     icon: [
