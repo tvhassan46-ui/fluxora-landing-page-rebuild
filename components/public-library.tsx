@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import useSWR from 'swr'
-import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Headphones, Library, Pause, Play, RotateCw } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Headphones, Languages, Library, Pause, Play, RotateCw } from 'lucide-react'
 import { publicBooks, type PublicBook } from '@/lib/reader-catalog'
 
 type PublicLibraryProps = { collection: 'all' | 'novels' }
@@ -87,7 +87,12 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const [chapterIndex, setChapterIndex] = useState(0)
   const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle')
   const [audioMessage, setAudioMessage] = useState('')
+  const [translations, setTranslations] = useState<Record<string, string>>({})
+  const [isEnglish, setIsEnglish] = useState(false)
+  const [isTranslating, setIsTranslating] = useState(false)
+  const [translationMessage, setTranslationMessage] = useState('')
   const readerRef = useRef<HTMLElement>(null)
+  const chapterKeyRef = useRef<string | null>(null)
   const activeBook = books.find((book) => book.id === selection?.bookId)
   const activeEpisode = activeBook?.episodes.find((episode) => episode.id === selection?.episodeId)
   const readerKey = activeBook && activeEpisode
@@ -100,16 +105,24 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const paragraphs = useMemo(() => data ? getReaderParagraphs(data.html) : [], [data?.html])
   const chapters = useMemo(() => splitReaderChapters(paragraphs), [paragraphs])
   const currentChapter = chapters[chapterIndex] ?? []
+  const chapterKey = readerKey ? `${readerKey}:${chapterIndex}` : null
+  chapterKeyRef.current = chapterKey
+  const translatedText = chapterKey ? translations[chapterKey] : undefined
+  const displayedParagraphs = isEnglish && translatedText
+    ? translatedText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean)
+    : currentChapter
 
   useEffect(() => () => {
     if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
-  }, [chapterIndex, readerKey])
+  }, [chapterIndex, isEnglish, readerKey])
 
   function openBook(book: PublicBook) {
     const firstEpisode = book.episodes[0]
     setChapterIndex(0)
     setAudioState('idle')
     setAudioMessage('')
+    setIsEnglish(false)
+    setTranslationMessage('')
     setSelection({ bookId: book.id, episodeId: firstEpisode.id })
     window.requestAnimationFrame(() => readerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
@@ -118,7 +131,48 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     setChapterIndex(0)
     setAudioState('idle')
     setAudioMessage('')
+    setIsEnglish(false)
+    setTranslationMessage('')
     setSelection({ bookId: book.id, episodeId })
+  }
+
+  async function toggleEnglishTranslation() {
+    if (!readerKey || !chapterKey || !currentChapter.length) return
+
+    window.speechSynthesis?.cancel()
+    setAudioState('idle')
+    setAudioMessage('')
+    setTranslationMessage('')
+
+    if (translatedText) {
+      setIsEnglish((current) => !current)
+      return
+    }
+
+    const requestedChapterKey = chapterKey
+    setIsTranslating(true)
+
+    try {
+      const response = await fetch(readerKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: currentChapter.join('\n\n') }),
+      })
+      const result = await response.json().catch(() => null) as { translation?: unknown } | null
+
+      if (!response.ok || typeof result?.translation !== 'string') {
+        throw new Error('Translation request failed')
+      }
+
+      setTranslations((current) => ({ ...current, [requestedChapterKey]: result.translation as string }))
+      if (chapterKeyRef.current === requestedChapterKey) setIsEnglish(true)
+    } catch {
+      if (chapterKeyRef.current === requestedChapterKey) {
+        setTranslationMessage('تعذّرت الترجمة الآن. حاول مرة أخرى بعد قليل.')
+      }
+    } finally {
+      setIsTranslating(false)
+    }
   }
 
   function toggleAudio() {
@@ -145,10 +199,11 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     }
 
     window.speechSynthesis.cancel()
-    const voice = window.speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith('ar'))
-    const utterance = new SpeechSynthesisUtterance(currentChapter.join('\n\n'))
+    const language = isEnglish ? 'en' : 'ar'
+    const voice = window.speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith(language))
+    const utterance = new SpeechSynthesisUtterance(isEnglish && translatedText ? translatedText : currentChapter.join('\n\n'))
     utterance.voice = voice ?? null
-    utterance.lang = voice?.lang ?? 'ar-SA'
+    utterance.lang = voice?.lang ?? (isEnglish ? 'en-US' : 'ar-SA')
     utterance.rate = 0.92
     utterance.onstart = () => setAudioState('playing')
     utterance.onend = () => {
@@ -158,10 +213,10 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     utterance.onerror = (event) => {
       setAudioState('idle')
       if (event.error !== 'canceled' && event.error !== 'interrupted') {
-        setAudioMessage('تعذّر تشغيل الصوت. تحقق من تفعيل الصوت أو تثبيت صوت عربي في الجهاز.')
+        setAudioMessage(`تعذّر تشغيل الصوت. تحقق من تفعيل الصوت أو تثبيت صوت ${isEnglish ? 'إنجليزي' : 'عربي'} في الجهاز.`)
       }
     }
-    setAudioMessage(voice ? '' : 'لم يُعثر على صوت عربي مثبت؛ سيحاول المتصفح استخدام صوته الافتراضي.')
+    setAudioMessage(voice ? '' : `لم يُعثر على صوت ${isEnglish ? 'إنجليزي' : 'عربي'} مثبت؛ سيحاول المتصفح استخدام صوته الافتراضي.`)
     window.speechSynthesis.speak(utterance)
     setAudioState('playing')
   }
@@ -240,6 +295,9 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <p>{activeBook.author} · {activeBook.genreLabel}</p>
               </div>
               <div className="reader-tools" aria-label="إعدادات القراءة">
+                <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? 'عرض النص العربي' : 'ترجمة هذا الفصل إلى الإنجليزية'}>
+                  <Languages aria-hidden="true" />{isTranslating ? 'جارٍ الترجمة…' : isEnglish ? 'عرض العربية' : 'ترجم للإنجليزية'}
+                </button>
                 <button className="audio-button" type="button" onClick={toggleAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? 'إيقاف القراءة السمعية مؤقتًا' : audioState === 'paused' ? 'استئناف القراءة السمعية' : 'استمع إلى هذا الفصل'}>
                   {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
                   {audioState === 'playing' ? 'إيقاف مؤقت' : audioState === 'paused' ? 'استئناف' : 'استمع'}
@@ -248,6 +306,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label="تكبير الخط">A+</button>
               </div>
             </div>
+            {translationMessage && <p className="audio-status" role="alert">{translationMessage}</p>}
             {audioMessage && <p className="audio-status" role="status">{audioMessage}</p>}
             {activeBook.episodes.length > 1 && (
               <nav className="episode-nav" aria-label={`فصول ${activeBook.title}`}>
@@ -261,7 +320,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             {chapters.length > 1 && (
               <nav className="episode-nav chapter-nav" aria-label={`فصول ${activeBook.title}`}>
                 {chapters.map((_, index) => (
-                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle'); setAudioMessage('') }}>
+                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle'); setAudioMessage(''); setIsEnglish(false); setTranslationMessage('') }}>
                     <span>{activeBook.episodes.length > 1 ? activeEpisode.title : activeBook.title}</span>الفصل {String(index + 1).padStart(2, '0')}
                   </button>
                 ))}
@@ -276,8 +335,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             )}
             {data && !isLoading && (
               <>
-                <div className="reader-text" dir="rtl" lang="ar" aria-live="polite" style={{ fontSize: `${fontSize}rem` }}>
-                  {currentChapter.map((paragraph, index) => <p key={`${chapterIndex}-${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
+                <div className="reader-text" dir={isEnglish ? 'ltr' : 'rtl'} lang={isEnglish ? 'en' : 'ar'} aria-live="polite" style={{ fontSize: `${fontSize}rem` }}>
+                  {displayedParagraphs.map((paragraph, index) => <p key={`${chapterIndex}-${isEnglish ? 'en' : 'ar'}-${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
                 </div>
                 <footer className="reader-source">
                   <span>النص متاح مجانًا عبر ويكي مصدر. انسب القراءة إلى المصدر الأصلي.</span>
