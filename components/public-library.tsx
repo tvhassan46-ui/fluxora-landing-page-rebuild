@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import useSWR from 'swr'
-import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Library, RotateCw } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Headphones, Library, Pause, Play, RotateCw } from 'lucide-react'
 import { publicBooks, type PublicBook } from '@/lib/reader-catalog'
 
 type PublicLibraryProps = { collection: 'all' | 'novels' }
@@ -40,11 +41,36 @@ function getReaderParagraphs(html: string): string[] {
     .filter((paragraph) => paragraph.length > 1 && !/^\[\s*عدل\s*\]$/.test(paragraph))
 }
 
+function splitReaderChapters(paragraphs: string[]): string[][] {
+  const chapters: string[][] = []
+  let currentChapter: string[] = []
+  let currentLength = 0
+
+  for (const paragraph of paragraphs) {
+    const blocks = paragraph.match(/[\s\S]{1,2200}(?:\s|$)/g) ?? [paragraph]
+    for (const block of blocks) {
+      const cleanedBlock = block.trim()
+      if (!cleanedBlock) continue
+      if (currentLength + cleanedBlock.length > 4200 && currentChapter.length) {
+        chapters.push(currentChapter)
+        currentChapter = []
+        currentLength = 0
+      }
+      currentChapter.push(cleanedBlock)
+      currentLength += cleanedBlock.length
+    }
+  }
+
+  if (currentChapter.length) chapters.push(currentChapter)
+  return chapters
+}
+
 function BookCover({ book }: { book: PublicBook }) {
   const initial = book.title.slice(0, 1)
   return (
-    <div className={`book-cover book-cover-${book.id}`} aria-hidden="true">
-      <span className="book-cover-frame" />
+    <div className={`book-cover book-cover-${book.id}`}>
+      <Image src={book.coverImage} alt={`غلاف كتاب ${book.title}`} fill sizes="(max-width: 620px) 98px, (max-width: 850px) 120px, 145px" className="book-cover-image" />
+      <span className="book-cover-frame" aria-hidden="true" />
       <span className="book-cover-mark">{initial}</span>
       <span className="book-cover-title">{book.title}</span>
       <span className="book-cover-author">{book.author}</span>
@@ -58,6 +84,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     : publicBooks
   const [selection, setSelection] = useState<Selection | null>(null)
   const [fontSize, setFontSize] = useState(1.25)
+  const [chapterIndex, setChapterIndex] = useState(0)
+  const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle')
   const readerRef = useRef<HTMLElement>(null)
   const activeBook = books.find((book) => book.id === selection?.bookId)
   const activeEpisode = activeBook?.episodes.find((episode) => episode.id === selection?.episodeId)
@@ -69,15 +97,50 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     errorRetryCount: 2,
   })
   const paragraphs = useMemo(() => data ? getReaderParagraphs(data.html) : [], [data?.html])
+  const chapters = useMemo(() => splitReaderChapters(paragraphs), [paragraphs])
+  const currentChapter = chapters[chapterIndex] ?? []
+
+  useEffect(() => () => {
+    if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+  }, [chapterIndex, readerKey])
 
   function openBook(book: PublicBook) {
     const firstEpisode = book.episodes[0]
+    setChapterIndex(0)
+    setAudioState('idle')
     setSelection({ bookId: book.id, episodeId: firstEpisode.id })
     window.requestAnimationFrame(() => readerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   function selectEpisode(book: PublicBook, episodeId: string) {
+    setChapterIndex(0)
+    setAudioState('idle')
     setSelection({ bookId: book.id, episodeId })
+  }
+
+  function toggleAudio() {
+    if (typeof window === 'undefined' || !window.speechSynthesis || !currentChapter.length) return
+
+    if (audioState === 'playing') {
+      window.speechSynthesis.pause()
+      setAudioState('paused')
+      return
+    }
+
+    if (audioState === 'paused') {
+      window.speechSynthesis.resume()
+      setAudioState('playing')
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(currentChapter.join('\n\n'))
+    utterance.lang = 'ar-SA'
+    utterance.rate = 0.92
+    utterance.onend = () => setAudioState('idle')
+    utterance.onerror = () => setAudioState('idle')
+    window.speechSynthesis.speak(utterance)
+    setAudioState('playing')
   }
 
   return (
@@ -99,7 +162,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
         <div className="library-hero-copy">
           <span className="library-eyebrow"><Library aria-hidden="true" /> مكتبة مفتوحة للجميع</span>
           <h1 id="library-title">حكايات عظيمة،<br /><em>وقراءة بلا حدود.</em></h1>
-          <p>اقرأ كتبًا تراثية كاملة وحكاياتها فصلًا بعد فصل. كل النصوص مجانية، وروابط المصادر الأصلية متاحة مع كل كتاب.</p>
+          <p>اقرأ كتبًا تراثية فصلًا بعد فصل، واختر المقطع الذي تريده. النصوص مجانية وروابط مصادرها الأصلية متاحة مع كل كتاب.</p>
           <a className="library-hero-cta" href="#book-collection">تصفّح الكتب <ArrowDown aria-hidden="true" /></a>
         </div>
         <div className="library-hero-art" aria-hidden="true">
@@ -143,17 +206,21 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             <span className="reader-empty-icon"><BookOpen aria-hidden="true" /></span>
             <p className="library-eyebrow">مساحتك الهادئة للقراءة</p>
             <h2 id="reader-title">اختر كتابًا لتبدأ</h2>
-            <p>اضغط «ابدأ القراءة» لفتح النص الكامل أو اختيار فصل من الكتاب.</p>
+            <p>اضغط «ابدأ القراءة» لتصفح فصول الكتاب واحدًا تلو الآخر.</p>
           </div>
         ) : (
           <div className="reader-paper">
             <div className="reader-heading">
               <div>
                 <span className="reader-kicker">{activeBook.title} <span aria-hidden="true">/</span> {activeEpisode.title}</span>
-                <h2 id="reader-title">{activeEpisode.title}</h2>
+                <h2 id="reader-title">{activeBook.episodes.length > 1 ? activeEpisode.title : `الفصل ${chapterIndex + 1}`}</h2>
                 <p>{activeBook.author} · {activeBook.genreLabel}</p>
               </div>
               <div className="reader-tools" aria-label="إعدادات القراءة">
+                <button className="audio-button" type="button" onClick={toggleAudio} aria-label={audioState === 'playing' ? 'إيقاف القراءة السمعية مؤقتًا' : audioState === 'paused' ? 'استئناف القراءة السمعية' : 'استمع إلى هذا الفصل'}>
+                  {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
+                  {audioState === 'playing' ? 'إيقاف مؤقت' : audioState === 'paused' ? 'استئناف' : 'استمع'}
+                </button>
                 <button type="button" onClick={() => setFontSize((size) => Math.max(1, +(size - 0.1).toFixed(1)))} aria-label="تصغير الخط">A−</button>
                 <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label="تكبير الخط">A+</button>
               </div>
@@ -162,12 +229,21 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
               <nav className="episode-nav" aria-label={`فصول ${activeBook.title}`}>
                 {activeBook.episodes.map((episode, index) => (
                   <button key={episode.id} type="button" className={episode.id === activeEpisode.id ? 'is-selected' : ''} aria-pressed={episode.id === activeEpisode.id} onClick={() => selectEpisode(activeBook, episode.id)}>
-                    <span>الحكاية {String(index + 1).padStart(2, '0')}</span>{episode.title}
+                    <span>الفصل {String(index + 1).padStart(2, '0')}</span>{episode.title}
                   </button>
                 ))}
               </nav>
             )}
-            {isLoading && <div className="reader-status" role="status">جارٍ تحميل النص من ويكي مصدر…</div>}
+            {chapters.length > 1 && (
+              <nav className="episode-nav chapter-nav" aria-label={`فصول ${activeBook.title}`}>
+                {chapters.map((_, index) => (
+                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle') }}>
+                    <span>{activeBook.episodes.length > 1 ? activeEpisode.title : activeBook.title}</span>الفصل {String(index + 1).padStart(2, '0')}
+                  </button>
+                ))}
+              </nav>
+            )}
+            {isLoading && <div className="reader-status" role="status">جارٍ تحميل الفصل من ويكي مصدر…</div>}
             {error && (
               <div className="reader-error" role="alert">
                 <p>لم نتمكن من تحميل النص الآن. يمكنك إعادة المحاولة أو فتح النسخة الأصلية.</p>
@@ -176,8 +252,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             )}
             {data && !isLoading && (
               <>
-                <div className="reader-text" dir="rtl" lang="ar" style={{ fontSize: `${fontSize}rem` }}>
-                  {paragraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
+                <div className="reader-text" dir="rtl" lang="ar" aria-live="polite" style={{ fontSize: `${fontSize}rem` }}>
+                  {currentChapter.map((paragraph, index) => <p key={`${chapterIndex}-${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
                 </div>
                 <footer className="reader-source">
                   <span>النص متاح مجانًا عبر ويكي مصدر. انسب القراءة إلى المصدر الأصلي.</span>
