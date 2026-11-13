@@ -10,7 +10,7 @@ const navHrefs = ['#features', '#how-it-works', '#about', '#products', '#journal
 const partnerHrefs = ['/library', '/novels', '/stories', '/quotes']
 
 function BrandMark() {
-  return <Image className="brand-mark" src="/riwaq-mark.svg" alt="" width={28} height={28} priority />
+  return <Image className="brand-mark" src="/liva-mark.svg" alt="" width={28} height={28} priority />
 }
 
 export default function FluxoraLanding() {
@@ -41,7 +41,7 @@ export default function FluxoraLanding() {
   return <>
     <a className="skip-link" href="#main">{copy.skip}</a>
     <header className="nav">
-      <a className="nav-brand" href="#main"><BrandMark/><span>Riwaq</span></a>
+      <a className="nav-brand" href="#main"><BrandMark/><span>LIVA</span></a>
       <nav className="nav-pill" aria-label={copy.primaryNav}><ul>{navLinks.map(({ label, href }, i) => <li key={label}><a href={href}>{label}{i === 0 && <span className="chevron" aria-hidden="true"/>}</a></li>)}</ul></nav>
       <div className="nav-actions"><LanguageSwitch /><a className="light-button" href="/sign-in">{copy.signIn}</a><button className="nav-burger" aria-label={menuOpen ? copy.closeMenu : copy.openMenu} aria-expanded={menuOpen} onClick={() => setMenuOpen(v => !v)}>{menuOpen ? '×' : <><i/><i/></>}</button></div>
       {menuOpen && <div className="nav-sheet"><ul>{navLinks.map(({ label, href }) => <li key={label}><a href={href} onClick={() => setMenuOpen(false)}>{label}</a></li>)}</ul><a className="flame-button" href="/sign-up" onClick={() => setMenuOpen(false)}>{copy.createAccount}</a></div>}
@@ -65,6 +65,6 @@ export default function FluxoraLanding() {
     <section id="about" className="content-section about-section"><div className="section-heading"><span>{copy.aboutKicker}</span><h2>{copy.aboutTitle}<br/><em>{copy.aboutTitleEm}</em></h2></div><p className="about-copy">{copy.aboutCopy}</p></section>
     <section id="products" className="content-section section-alt"><div className="section-heading"><span>{copy.exploreKicker}</span><h2>{copy.exploreTitle}<br/><em>{copy.exploreTitleEm}</em></h2><p>{copy.exploreCopy}</p></div><div className="product-grid">{copy.products.map(([tag, title, description, action], index) => <a id={['bookstore', 'novels', 'stories', 'quotes'][index]} className="product-card" href={['/library', '/novels', '/stories', '/quotes'][index]} key={title}><span>{tag}</span><h3>{title}</h3><p>{description}</p><b>{action} <span aria-hidden="true">↗</span></b></a>)}</div></section>
     <section id="journal" className="content-section journal-section"><div className="section-heading"><span>{copy.journalKicker}</span><h2>{copy.journalTitle}<br/><em>{copy.journalTitleEm}</em></h2></div><a className="journal-link" href="/sign-up"><span><small>{copy.journalMeta}</small><strong>{copy.journalLink}</strong></span><b aria-hidden="true">↗</b></a></section>
-    <footer className="site-footer"><a className="nav-brand" href="#main"><BrandMark/><span>Riwaq</span></a><span>{copy.footer}</span><div><a href="/sign-in">{copy.signIn}</a><a href="/sign-up">{copy.getStarted}</a></div></footer>
+    <footer className="site-footer"><a className="nav-brand" href="#main"><BrandMark/><span>LIVA</span></a><span>{copy.footer}</span><div><a href="/sign-in">{copy.signIn}</a><a href="/sign-up">{copy.getStarted}</a></div></footer>
   </>
 }
