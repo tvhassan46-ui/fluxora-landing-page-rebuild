@@ -97,6 +97,11 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const [chapterIndex, setChapterIndex] = useState(0)
   const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle')
   const [audioMessage, setAudioMessage] = useState('')
+  const [isPreparingAudio, setIsPreparingAudio] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const audioAbortRef = useRef<AbortController | null>(null)
+  const audioRequestRef = useRef(0)
+  const audioUrlCacheRef = useRef<Map<string, string>>(new Map())
   const [translations, setTranslations] = useState<Record<string, string>>({})
   const [isEnglish, setIsEnglish] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
@@ -125,11 +130,37 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     ? translatedText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean)
     : currentChapter
 
+  useEffect(() => {
+    audioRequestRef.current += 1
+    audioAbortRef.current?.abort()
+    audioAbortRef.current = null
+    audioRef.current?.pause()
+    if (audioRef.current) audioRef.current.currentTime = 0
+    setAudioState('idle')
+    setIsPreparingAudio(false)
+    setAudioMessage('')
+  }, [chapterKey, isEnglish])
+
   useEffect(() => () => {
-    if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
-  }, [chapterIndex, isEnglish, readerKey])
+    audioAbortRef.current?.abort()
+    audioRef.current?.pause()
+    for (const url of audioUrlCacheRef.current.values()) URL.revokeObjectURL(url)
+    audioUrlCacheRef.current.clear()
+  }, [])
+
+  function stopAudio() {
+    audioRequestRef.current += 1
+    audioAbortRef.current?.abort()
+    audioAbortRef.current = null
+    const audio = audioRef.current
+    audio?.pause()
+    if (audio) audio.currentTime = 0
+    setIsPreparingAudio(false)
+    setAudioState('idle')
+  }
 
   function openBook(book: PublicBook) {
+    stopAudio()
     const firstEpisode = book.episodes[0]
     setChapterIndex(0)
     setAudioState('idle')
@@ -141,6 +172,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   }
 
   function selectEpisode(book: PublicBook, episodeId: string) {
+    stopAudio()
     setChapterIndex(0)
     setAudioState('idle')
     setAudioMessage('')
@@ -152,8 +184,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   async function toggleEnglishTranslation() {
     if (!readerKey || !chapterKey || !currentChapter.length) return
 
-    window.speechSynthesis?.cancel()
-    setAudioState('idle')
+    stopAudio()
     setAudioMessage('')
     setTranslationMessage('')
 
@@ -188,9 +219,25 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     }
   }
 
-  function toggleAudio() {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      setAudioMessage(copy.audioUnsupported)
+  async function toggleAudio() {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (audioState === 'playing') {
+      audio.pause()
+      setAudioState('paused')
+      return
+    }
+
+    if (audioState === 'paused') {
+      try {
+        await audio.play()
+        setAudioState('playing')
+        setAudioMessage('')
+      } catch {
+        setAudioState('idle')
+        setAudioMessage(copy.voiceError)
+      }
       return
     }
 
@@ -199,47 +246,71 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
       return
     }
 
-    if (audioState === 'playing') {
-      window.speechSynthesis.pause()
-      setAudioState('paused')
-      return
-    }
+    const language = isEnglish && translatedText ? 'en' : 'ar'
+    const textToRead = isEnglish && translatedText ? translatedText : currentChapter.join('\\n\\n')
+    const cacheKey = language + '|' + textToRead
+    const cachedUrl = audioUrlCacheRef.current.get(cacheKey)
+    const requestId = ++audioRequestRef.current
 
-    if (audioState === 'paused') {
-      window.speechSynthesis.resume()
-      setAudioState('playing')
-      return
-    }
+    setAudioMessage('')
+    setIsPreparingAudio(true)
 
-    window.speechSynthesis.cancel()
-    const language = isEnglish ? 'en' : 'ar'
-    const voice = window.speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith(language))
-    const utterance = new SpeechSynthesisUtterance(isEnglish && translatedText ? translatedText : currentChapter.join('\n\n'))
-    utterance.voice = voice ?? null
-    utterance.lang = voice?.lang ?? (isEnglish ? 'en-US' : 'ar-SA')
-    utterance.rate = 0.92
-    utterance.onstart = () => setAudioState('playing')
-    utterance.onend = () => {
+    try {
+      let audioUrl = cachedUrl
+      if (!audioUrl) {
+        const controller = new AbortController()
+        audioAbortRef.current = controller
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToRead, language }),
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => null) as { error?: unknown } | null
+          throw new Error(typeof result?.error === 'string' ? result.error : copy.voiceError)
+        }
+
+        const audioBlob = await response.blob()
+        if (requestId !== audioRequestRef.current) return
+
+        audioUrl = URL.createObjectURL(audioBlob)
+        audioUrlCacheRef.current.set(cacheKey, audioUrl)
+
+        while (audioUrlCacheRef.current.size > 5) {
+          const oldestEntry = audioUrlCacheRef.current.entries().next().value as [string, string] | undefined
+          if (!oldestEntry) break
+          URL.revokeObjectURL(oldestEntry[1])
+          audioUrlCacheRef.current.delete(oldestEntry[0])
+        }
+      }
+
+      if (requestId !== audioRequestRef.current) return
+      audio.src = audioUrl
+      audio.currentTime = 0
+      await audio.play()
+      if (requestId === audioRequestRef.current) setAudioState('playing')
+    } catch (error) {
+      if (requestId !== audioRequestRef.current) return
+      if (error instanceof Error && error.name === 'AbortError') return
       setAudioState('idle')
-      setAudioMessage('')
-    }
-    utterance.onerror = (event) => {
-      setAudioState('idle')
-      if (event.error !== 'canceled' && event.error !== 'interrupted') {
-        setAudioMessage(copy.voiceError)
+      setAudioMessage(error instanceof Error ? error.message : copy.voiceError)
+    } finally {
+      if (requestId === audioRequestRef.current) {
+        setIsPreparingAudio(false)
+        audioAbortRef.current = null
       }
     }
-    setAudioMessage(voice ? '' : copy.voiceMissing.replace('{language}', isEnglish ? (locale === 'ar' ? 'إنجليزي' : 'English') : (locale === 'ar' ? 'عربي' : 'Arabic')))
-    window.speechSynthesis.speak(utterance)
-    setAudioState('playing')
   }
 
   return (
     <main className="library-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
+      <audio ref={audioRef} preload="none" onEnded={() => { setAudioState('idle'); setAudioMessage('') }} onError={() => { setAudioState('idle'); setAudioMessage(copy.voiceError) }} />
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى رواق' : 'Back to Riwaq'}>
-          <Image src="/riwaq-mark.svg" alt="" width={32} height={32} className="library-logo-mark" />
-          <span>Riwaq</span>
+        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى LIVA' : 'Back to LIVA'}>
+          <Image src="/liva-mark.svg" alt="" width={32} height={32} className="library-logo-mark" />
+          <span>LIVA</span>
         </Link>
         <nav className="library-nav" aria-label={copy.nav.aria}>
           <Link href="/library" aria-current={collection === 'books' ? 'page' : undefined}>{copy.nav.books}</Link>
@@ -317,9 +388,9 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? copy.showArabic : copy.translate}>
                   <Languages aria-hidden="true" />{isTranslating ? copy.translating : isEnglish ? copy.showArabic : copy.translate}
                 </button>
-                <button className="audio-button" type="button" onClick={toggleAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? copy.pause : audioState === 'paused' ? copy.resume : copy.listen}>
+                <button className="audio-button" type="button" onClick={() => void toggleAudio()} disabled={!currentChapter.length || isPreparingAudio} aria-busy={isPreparingAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? copy.pause : audioState === 'paused' ? copy.resume : copy.listen}>
                   {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
-                  {audioState === 'playing' ? copy.pauseLabel : audioState === 'paused' ? copy.resumeLabel : copy.listenLabel}
+                  {isPreparingAudio ? copy.preparingAudio : audioState === 'playing' ? copy.pauseLabel : audioState === 'paused' ? copy.resumeLabel : copy.listenLabel}
                 </button>
                 <button type="button" onClick={() => setFontSize((size) => Math.max(1, +(size - 0.1).toFixed(1)))} aria-label={copy.decreaseFont}>A−</button>
                 <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label={copy.increaseFont}>A+</button>
@@ -339,7 +410,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             {chapters.length > 1 && (
               <nav className="episode-nav chapter-nav" aria-label={`${copy.chapters} ${activeBookTitle}`}>
                 {chapters.map((_, index) => (
-                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { setChapterIndex(index); setAudioState('idle'); setAudioMessage(''); setIsEnglish(false); setTranslationMessage('') }}>
+                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { stopAudio(); setChapterIndex(index); setAudioMessage(''); setIsEnglish(false); setTranslationMessage('') }}>
                     <span>{activeBook.episodes.length > 1 ? activeEpisodeTitle : activeBookTitle}</span>{copy.chapter} {String(index + 1).padStart(2, '0')}
                   </button>
                 ))}
@@ -369,7 +440,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
       </section>
 
       <footer className="library-footer">
-        <Link href="/">Riwaq</Link>
+        <Link href="/">LIVA</Link>
         <span>{copy.footer}</span>
         <Link href="/quotes">{copy.moreQuotes} <ArrowRight aria-hidden="true" /></Link>
       </footer>
