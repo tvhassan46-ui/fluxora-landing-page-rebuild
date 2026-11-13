@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { gateway, generateText } from 'ai'
 import { NextResponse } from 'next/server'
 import { publicBooks } from '@/lib/reader-catalog'
@@ -9,7 +10,10 @@ type WikisourceParseResponse = {
   error?: { info?: string }
 }
 
-export const maxDuration = 30
+export const maxDuration = 60
+
+const translationCache = new Map<string, { translation: string; expiresAt: number }>()
+const TRANSLATION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { bookId } = await params
@@ -30,21 +34,39 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: 'Text is too long to translate in one request' }, { status: 413 })
   }
 
+  const cacheKey = createHash('sha256').update(sourceText).digest('hex')
+  const cachedTranslation = translationCache.get(cacheKey)
+  if (cachedTranslation && cachedTranslation.expiresAt > Date.now()) {
+    return NextResponse.json({ translation: cachedTranslation.translation }, {
+      headers: { 'Cache-Control': 'private, max-age=21600', 'X-Translation-Cache': 'HIT' },
+    })
+  }
+
   try {
     const { text } = await generateText({
-      model: gateway('google/gemini-3.8-flash-lite'),
+      model: gateway('google/gemini-3.8-flash'),
       system: 'You are a careful Arabic-to-English literary translator. Translate the provided Arabic text faithfully into clear English. Preserve paragraph breaks, names, imagery, and meaning. Do not summarize, omit, or add commentary. Return only the English translation.',
       prompt: sourceText,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
     })
 
     if (!text.trim()) {
       return NextResponse.json({ error: 'Translation is empty' }, { status: 502 })
     }
 
-    return NextResponse.json({ translation: text.trim() })
-  } catch {
-    return NextResponse.json({ error: 'Translation is temporarily unavailable' }, { status: 502 })
+    const translation = text.trim()
+    translationCache.set(cacheKey, { translation, expiresAt: Date.now() + TRANSLATION_CACHE_TTL_MS })
+    if (translationCache.size > 48) {
+      const oldestKey = translationCache.keys().next().value
+      if (oldestKey) translationCache.delete(oldestKey)
+    }
+
+    return NextResponse.json({ translation }, {
+      headers: { 'Cache-Control': 'private, max-age=21600', 'X-Translation-Cache': 'MISS' },
+    })
+  } catch (error) {
+    console.error('Arabic-to-English translation failed:', error)
+    return NextResponse.json({ error: 'Translation is temporarily unavailable. Check the AI Gateway setup and try again.' }, { status: 502 })
   }
 }
 
