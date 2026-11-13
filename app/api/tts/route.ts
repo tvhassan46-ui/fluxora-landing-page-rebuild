@@ -151,7 +151,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.GOOGLE_TTS_API_KEY
   if (!apiKey) {
     return NextResponse.json(
-      { error: 'Audio reading is not configured yet. The site owner must add GOOGLE_TTS_API_KEY.' },
+      { code: 'TTS_NOT_CONFIGURED', error: 'Audio reading is not configured yet.' },
       { status: 503 },
     )
   }
