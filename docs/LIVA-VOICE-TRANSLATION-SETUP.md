@@ -7,12 +7,12 @@ The reader sends text to the server route `POST /api/tts`. Google Cloud Text-to-
 1. Open Google Cloud Console and select or create a project.
 2. Enable **Cloud Text-to-Speech API** for that project.
 3. Create an API key in **APIs & Services → Credentials**. Restrict the key to the Cloud Text-to-Speech API.
-4. Add the key as `GOOGLE_TTS_API_KEY` in Vercel → Project → Settings → Environment Variables.
+4. Add the key as `TTS_API_KEY` in Vercel → Project → Settings → Environment Variables.
 5. Redeploy after saving the variable.
 
 The reader uses an Arabic `ar-XA` WaveNet voice for the original text. When an English translation is active, it reads the translated English text with an English Neural2 voice. Long passages are split under the provider's 5,000-byte input limit and joined into one WAV response. Generated audio is cached in memory for repeat requests.
 
-Do not name this variable `NEXT_PUBLIC_GOOGLE_TTS_API_KEY`: it must remain server-side.
+Do not name this variable `NEXT_PUBLIC_TTS_API_KEY`: it must remain server-side.
 
 ## 2. Arabic-to-English translation
 
