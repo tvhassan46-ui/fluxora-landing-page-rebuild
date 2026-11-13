@@ -1,29 +1,40 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { cookies } from 'next/headers'
-import { Amiri, Cairo, Scheherazade_New } from 'next/font/google'
+import { Noto_Sans_Arabic } from 'next/font/google'
 import { LanguageProvider, type Locale } from '@/components/language-provider'
 
+const arabicFont = Noto_Sans_Arabic({ subsets: ['arabic'], weight: ['400', '500', '600', '700'], variable: '--font-arabic' })
 import './globals.css'
 import './auth.css'
 import './library.css'
 
-const headingFont = Amiri({ subsets: ['arabic', 'latin'], weight: '700', variable: '--font-heading' })
-const bodyFont = Scheherazade_New({ subsets: ['arabic', 'latin'], weight: '400', variable: '--font-copy' })
-const buttonFont = Cairo({ subsets: ['arabic', 'latin'], weight: '600', variable: '--font-buttons' })
-
 export const metadata: Metadata = {
-  title: 'LIVRA — Arabic Library',
-  description: 'LIVRA brings Arabic books, novels, short stories, and literary quotes together in one welcoming library.',
+  title: 'Riwaq — Arabic Library',
+  description: 'Discover Arabic books, novels, short stories, and literary quotes in one welcoming library.',
   generator: 'v0.app',
   icons: {
-    icon: [{ url: '/livra-logo.svg', type: 'image/svg+xml' }],
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
   },
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light',
-  themeColor: '#FFFFFF',
+  colorScheme: 'dark',
+  themeColor: '#120400',
 }
 
 export default async function RootLayout({
@@ -35,7 +46,7 @@ export default async function RootLayout({
   const initialLocale: Locale = savedLocale === 'ar' ? 'ar' : 'en'
 
   return (
-    <html lang={initialLocale} dir={initialLocale === 'ar' ? 'rtl' : 'ltr'} className={`${headingFont.variable} ${bodyFont.variable} ${buttonFont.variable}`}>
+    <html lang={initialLocale} dir={initialLocale === 'ar' ? 'rtl' : 'ltr'} className={arabicFont.variable}>
       <body className="antialiased">
         <LanguageProvider initialLocale={initialLocale}>
           {children}

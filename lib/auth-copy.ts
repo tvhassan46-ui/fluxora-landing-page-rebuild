@@ -2,7 +2,7 @@ import type { Locale } from '@/components/language-provider'
 
 const copy = {
   en: {
-    back: 'Back to LIVRA',
+    back: 'Back to Riwaq',
     eyebrow: 'A world of books, stories, and ideas',
     signInTitle: 'Welcome back',
     signUpTitle: 'Create your account',
@@ -18,8 +18,8 @@ const copy = {
     createAccount: 'Create account',
     signIn: 'Sign in',
     existingAccount: 'Already have an account?',
-    newAccount: 'New to LIVRA?',
-    dashboardEyebrow: 'Your LIVRA account',
+    newAccount: 'New to Riwaq?',
+    dashboardEyebrow: 'Your Riwaq account',
     welcome: 'Welcome,',
     signedInAs: 'You’re signed in as',
     shelfReady: 'Your reading shelf is ready.',
@@ -28,7 +28,7 @@ const copy = {
     signOut: 'Sign out',
   },
   ar: {
-    back: 'العودة إلى LIVRA',
+    back: 'العودة إلى رواق',
     eyebrow: 'عالم من الكتب والحكايات والأفكار',
     signInTitle: 'مرحبًا بعودتك',
     signUpTitle: 'أنشئ حسابك',
@@ -44,8 +44,8 @@ const copy = {
     createAccount: 'إنشاء حساب',
     signIn: 'تسجيل الدخول',
     existingAccount: 'لديك حساب بالفعل؟',
-    newAccount: 'جديد في LIVRA؟',
-    dashboardEyebrow: 'حسابك في LIVRA',
+    newAccount: 'جديد في رواق؟',
+    dashboardEyebrow: 'حسابك في رواق',
     welcome: 'مرحبًا،',
     signedInAs: 'تم تسجيل الدخول باسم',
     shelfReady: 'رفّ قراءتك جاهز.',

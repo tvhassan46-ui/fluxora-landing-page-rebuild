@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { PublicLibrary } from '@/components/public-library'
 
 export const metadata: Metadata = {
-  title: 'Arabic Books | LIVRA',
+  title: 'Arabic Books | Riwaq',
   description: 'Explore classic Arabic literary works and journeys outside the novel and story collections.'
 }
 

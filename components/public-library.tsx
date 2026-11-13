@@ -237,9 +237,9 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   return (
     <main className="library-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى LIVRA' : 'Back to LIVRA'}>
-          <Image src="/livra-logo.svg" alt="" width={32} height={32} className="library-logo-mark" />
-          <span>LIVRA</span>
+        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى رواق' : 'Back to Riwaq'}>
+          <Image src="/riwaq-mark.svg" alt="" width={32} height={32} className="library-logo-mark" />
+          <span>Riwaq</span>
         </Link>
         <nav className="library-nav" aria-label={copy.nav.aria}>
           <Link href="/library" aria-current={collection === 'books' ? 'page' : undefined}>{copy.nav.books}</Link>
@@ -369,7 +369,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
       </section>
 
       <footer className="library-footer">
-        <Link href="/">LIVRA</Link>
+        <Link href="/">Riwaq</Link>
         <span>{copy.footer}</span>
         <Link href="/quotes">{copy.moreQuotes} <ArrowRight aria-hidden="true" /></Link>
       </footer>
