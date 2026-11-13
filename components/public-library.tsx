@@ -247,7 +247,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     }
 
     const language = isEnglish && translatedText ? 'en' : 'ar'
-    const textToRead = isEnglish && translatedText ? translatedText : currentChapter.join('\\n\\n')
+    const textToRead = isEnglish && translatedText ? translatedText : currentChapter.join(String.fromCharCode(10, 10))
     const cacheKey = language + '|' + textToRead
     const cachedUrl = audioUrlCacheRef.current.get(cacheKey)
     const requestId = ++audioRequestRef.current
