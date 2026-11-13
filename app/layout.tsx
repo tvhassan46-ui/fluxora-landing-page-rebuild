@@ -10,7 +10,7 @@ import './auth.css'
 import './library.css'
 
 export const metadata: Metadata = {
-  title: 'Hikaya — Books, Novels & Literary Quotes',
+  title: 'Riwaq — Arabic Library',
   description: 'Discover Arabic books, novels, short stories, and literary quotes in one welcoming library.',
   generator: 'v0.app',
   icons: {

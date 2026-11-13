@@ -14,7 +14,7 @@ export function DashboardView({ name, email }: { name: string; email: string }) 
   return (
     <main className="auth-page dashboard-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <div className="auth-topbar">
-        <Link className="auth-brand" href="/" aria-label={locale === 'ar' ? 'الصفحة الرئيسية لحكاية' : 'Hikaya home'}><Image src="/hikaya-mark.svg" alt="" width={28} height={28} />Hikaya</Link>
+        <Link className="auth-brand" href="/" aria-label={locale === 'ar' ? 'الصفحة الرئيسية لرواق' : 'Riwaq home'}><Image src="/riwaq-mark.svg" alt="" width={28} height={28} />Riwaq</Link>
         <LanguageSwitch />
       </div>
       <section className="dashboard-card" aria-labelledby="dashboard-title">

@@ -28,7 +28,7 @@ export function QuoteLibrary() {
   return (
     <main className="library-page quote-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى حكاية' : 'Back to Hikaya'}><Image src="/hikaya-mark.svg" alt="" width={32} height={32} className="library-logo-mark" /><span>Hikaya <i>{copy.brand}</i></span></Link>
+        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى رواق' : 'Back to Riwaq'}><Image src="/riwaq-mark.svg" alt="" width={32} height={32} className="library-logo-mark" /><span>Riwaq</span></Link>
         <nav className="library-nav" aria-label={copy.nav.aria}><Link href="/library">{copy.nav.books}</Link><Link href="/novels">{copy.nav.novels}</Link><Link href="/stories">{copy.nav.stories}</Link><Link href="/quotes" aria-current="page">{copy.nav.quotes}</Link></nav>
         <div className="library-header-actions"><LanguageSwitch /><Link className="library-home-link" href="/">{copy.home} <ArrowLeft aria-hidden="true" /></Link></div>
       </header>
@@ -56,7 +56,7 @@ export function QuoteLibrary() {
         })}
       </section>
       <QuoteChat />
-      <footer className="library-footer"><Link href="/">Hikaya</Link><span>{copy.footer}</span><Link href="/library">{copy.discoverBooks} <ArrowLeft aria-hidden="true" /></Link></footer>
+      <footer className="library-footer"><Link href="/">Riwaq</Link><span>{copy.footer}</span><Link href="/library">{copy.discoverBooks} <ArrowLeft aria-hidden="true" /></Link></footer>
     </main>
   )
 }

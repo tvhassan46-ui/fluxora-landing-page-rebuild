@@ -52,7 +52,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     <main className="auth-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <div className="auth-orbit auth-orbit-one" aria-hidden="true" />
       <div className="auth-orbit auth-orbit-two" aria-hidden="true" />
-      <div className="auth-topbar"><Link className="auth-brand" href="/" aria-label={locale === 'ar' ? 'الصفحة الرئيسية لحكاية' : 'Hikaya home'}><Image src="/hikaya-mark.svg" alt="" width={28} height={28} />Hikaya</Link><LanguageSwitch /></div>
+      <div className="auth-topbar"><Link className="auth-brand" href="/" aria-label={locale === 'ar' ? 'الصفحة الرئيسية لرواق' : 'Riwaq home'}><Image src="/riwaq-mark.svg" alt="" width={28} height={28} />Riwaq</Link><LanguageSwitch /></div>
       <section className="auth-card" aria-labelledby="auth-title">
         <Link className="auth-back" href="/">{locale === 'ar' ? '→' : '←'} {copy.back}</Link>
         <p className="auth-eyebrow">{copy.eyebrow}</p>

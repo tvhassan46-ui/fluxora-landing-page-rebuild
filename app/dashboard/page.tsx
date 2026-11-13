@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { DashboardView } from '@/components/dashboard-view'
 import { auth } from '@/lib/auth'
 
-export const metadata: Metadata = { title: 'Your reading shelf | Hikaya' }
+export const metadata: Metadata = { title: 'Your reading shelf | Riwaq' }
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() })
