@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { cookies } from 'next/headers'
 import { Manrope, Noto_Sans_Arabic } from 'next/font/google'
 import { LanguageProvider, type Locale } from '@/components/language-provider'
+import { ReaderActions } from '@/components/reader-actions'
 
 const manropeFont = Manrope({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-manrope' })
 const arabicFont = Noto_Sans_Arabic({ subsets: ['arabic'], weight: ['400', '500', '600', '700'], variable: '--font-arabic' })
@@ -51,6 +52,7 @@ export default async function RootLayout({
       <body className="antialiased">
         <LanguageProvider initialLocale={initialLocale}>
           {children}
+          <ReaderActions />
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </LanguageProvider>
       </body>
