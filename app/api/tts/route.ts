@@ -148,7 +148,7 @@ function pruneAudioCache() {
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.GOOGLE_TTS_API_KEY
+  const apiKey = process.env.TTS_API_KEY || process.env.GOOGLE_TTS_API_KEY
   if (!apiKey) {
     return NextResponse.json(
       { code: 'TTS_NOT_CONFIGURED', error: 'Audio reading is not configured yet.' },
