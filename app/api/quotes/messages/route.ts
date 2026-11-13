@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { text, voiceId = "21m00Tcm4TlvDq8ikWAM" } = await req.json();
-
-  if (!text) {
-    return NextResponse.json({ error: "Text is required" }, { status: 400 });
-  }
-
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key not configured" }, { status: 500 });
-  }
-
   try {
+    const { text, voiceId = "21m00Tcm4TlvDq8ikWAM" } = await req.json();
+
+    if (!text) {
+      return NextResponse.json({ error: "Text is required" }, { status: 400 });
+    }
+
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
+    }
+
     const res = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
