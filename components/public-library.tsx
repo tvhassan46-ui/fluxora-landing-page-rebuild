@@ -306,7 +306,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
   return (
     <main className="library-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
-      <audio ref={audioRef} preload="none" onEnded={() => { setAudioState('idle'); setAudioMessage('') }} onError={() => { setAudioState('idle'); setAudioMessage(copy.voiceError) }} />
+      <audio ref={audioRef} className="reader-audio-element" aria-hidden="true" preload="none" onEnded={() => { setAudioState('idle'); setAudioMessage('') }} onError={() => { setAudioState('idle'); setAudioMessage(copy.voiceError) }} />
       <header className="library-topbar">
         <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى LIVA' : 'Back to LIVA'}>
           <Image src="/liva-mark.svg" alt="" width={32} height={32} className="library-logo-mark" />
