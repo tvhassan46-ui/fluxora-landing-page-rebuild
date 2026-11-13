@@ -268,8 +268,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
         })
 
         if (!response.ok) {
-          const result = await response.json().catch(() => null) as { error?: unknown } | null
-          throw new Error(typeof result?.error === 'string' ? result.error : copy.voiceError)
+          const result = await response.json().catch(() => null) as { error?: unknown; code?: unknown } | null
+          throw new Error(result?.code === 'TTS_NOT_CONFIGURED' ? copy.voiceNotConfigured : copy.voiceError)
         }
 
         const audioBlob = await response.blob()
