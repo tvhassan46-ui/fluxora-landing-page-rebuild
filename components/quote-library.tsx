@@ -25,6 +25,26 @@ export function QuoteLibrary() {
     }
   }
 
+  async function listenQuote(lines: string[]) {
+    try {
+      const response = await fetch('/api/quotes/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: lines.join('\n') }),
+      })
+      if (!response.ok) return
+      const blob = await response.blob()
+      await new Audio(URL.createObjectURL(blob)).play()
+    } catch {
+      // Ignore playback and network errors without affecting the quote card.
+    }
+  }
+
+  function translateQuote(lines: string[]) {
+    const text = lines.join('\n')
+    window.open(`https://translate.google.com/?sl=ar&tl=en&text=${encodeURIComponent(text)}&op=translate`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <main className="library-page quote-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="library-topbar">
@@ -50,6 +70,12 @@ export function QuoteLibrary() {
               <button type="button" className="copy-quote-button" onClick={() => void copyQuote(quote.id, lines)}>
                 {copiedId === quote.id ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
                 {copiedId === quote.id ? copy.copied : copy.copy}
+              </button>
+              <button type="button" className="copy-quote-button" onClick={() => void listenQuote(lines)}>
+                {locale === 'ar' ? 'استمع' : 'Listen'}
+              </button>
+              <button type="button" className="copy-quote-button" onClick={() => translateQuote(lines)}>
+                {locale === 'ar' ? 'ترجم' : 'Translate'}
               </button>
             </article>
           )
