@@ -8,7 +8,7 @@ const copy = {
     heroTitle: ['Great stories,', 'limitless reading.'],
     heroDescription: 'Read classic works chapter by chapter and choose the passage you want. Every book is free, with a link to its original source.',
     browseBooks: 'Browse books',
-    sectionEyebrow: 'Riwaq selections',
+    sectionEyebrow: 'LIVRA selections',
     sectionTitle: { books: 'Books', novels: 'Novels', stories: 'Stories' },
     sectionDescription: {
       books: 'Literary journeys and classic works beyond the novel and story shelves.',
@@ -57,7 +57,7 @@ const copy = {
     heroTitle: ['حكايات عظيمة،', 'وقراءة بلا حدود.'],
     heroDescription: 'اقرأ كتبًا تراثية فصلًا بعد فصل، واختر المقطع الذي تريده. النصوص مجانية وروابط مصادرها الأصلية متاحة مع كل كتاب.',
     browseBooks: 'تصفّح الكتب',
-    sectionEyebrow: 'مختارات رواق',
+    sectionEyebrow: 'مختارات LIVRA',
     sectionTitle: { books: 'الكتب', novels: 'الروايات', stories: 'الحكايات' },
     sectionDescription: {
       books: 'رحلات أدبية وأعمال تراثية خارج رفوف الروايات والحكايات.',

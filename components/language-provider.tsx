@@ -31,8 +31,8 @@ export function LanguageProvider({
     document.documentElement.lang = locale
     document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
     document.title = locale === 'ar'
-      ? 'رواق — مكتبة عربية'
-      : 'Riwaq — Arabic Library'
+      ? 'LIVRA — مكتبة عربية'
+      : 'LIVRA — Arabic Library'
     document.querySelector('meta[name="description"]')?.setAttribute(
       'content',
       locale === 'ar'

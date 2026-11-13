@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { QuoteLibrary } from '@/components/quote-library'
 
 export const metadata: Metadata = {
-  title: 'Quotes | Riwaq',
+  title: 'Quotes | LIVRA',
   description: 'Selected Arabic poetry and quotations linked to their original sources.',
 }
 
