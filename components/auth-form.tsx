@@ -32,7 +32,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     try {
       const result = isSignUp
         ? await authClient.signUp.email({ name: name.trim(), email: email.trim().toLowerCase(), password })
-        : await authClient.signIn.email({ email: email.trim().toLowerCase(), password })
+        : await authClient.signIn.email({ email: email.trim().toLowerCase(), password, rememberMe: true })
 
       if (result.error) {
         setError(copy.error)
