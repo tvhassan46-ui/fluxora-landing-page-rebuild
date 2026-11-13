@@ -10,7 +10,7 @@ const navHrefs = ['#features', '#how-it-works', '#about', '#products', '#journal
 const partnerHrefs = ['/library', '/novels', '/stories', '/quotes']
 
 function BrandMark() {
-  return <Image className="brand-mark" src="/riwaq-mark.svg" alt="" width={28} height={28} priority />
+  return <Image className="brand-mark" src="/liva-mark.svg" alt="" width={28} height={28} priority />
 }
 
 export default function FluxoraLanding() {
