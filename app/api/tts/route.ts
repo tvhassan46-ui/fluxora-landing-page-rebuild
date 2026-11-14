@@ -5,134 +5,17 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 type TtsLanguage = 'ar' | 'en'
-type GoogleTtsResponse = {
-  audioContent?: string
-  error?: { message?: string }
+
+type CachedAudio = {
+  audio: Buffer
+  contentType: string
+  expiresAt: number
 }
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000
-const MAX_CACHE_ENTRIES = 36
-const MAX_TEXT_CHARACTERS = 12000
-const MAX_INPUT_BYTES_PER_REQUEST = 4400
-const audioCache = new Map<string, { audio: Buffer; expiresAt: number }>()
-
-function splitTextByByteLimit(text: string): string[] {
-  const tokens = text.match(/\S+\s*|\s+/gu) ?? [text]
-  const chunks: string[] = []
-  let current = ''
-
-  const pushLongTokenInPieces = (token: string) => {
-    let piece = ''
-    for (const character of token) {
-      if (Buffer.byteLength(piece + character, 'utf8') > MAX_INPUT_BYTES_PER_REQUEST) {
-        if (piece) chunks.push(piece)
-        piece = character
-      } else {
-        piece += character
-      }
-    }
-    if (piece) chunks.push(piece)
-  }
-
-  for (const token of tokens) {
-    if (Buffer.byteLength(token, 'utf8') > MAX_INPUT_BYTES_PER_REQUEST) {
-      if (current) {
-        chunks.push(current)
-        current = ''
-      }
-      pushLongTokenInPieces(token)
-      continue
-    }
-
-    if (Buffer.byteLength(current + token, 'utf8') > MAX_INPUT_BYTES_PER_REQUEST) {
-      if (current) chunks.push(current)
-      current = token
-    } else {
-      current += token
-    }
-  }
-
-  if (current) chunks.push(current)
-  return chunks.map((chunk) => chunk.trim()).filter(Boolean)
-}
-
-function getPcmFromWav(wav: Buffer): Buffer {
-  if (wav.toString('ascii', 0, 4) !== 'RIFF' || wav.toString('ascii', 8, 12) !== 'WAVE') {
-    throw new Error('The speech provider returned an invalid WAV file.')
-  }
-
-  let offset = 12
-  while (offset + 8 <= wav.length) {
-    const chunkId = wav.toString('ascii', offset, offset + 4)
-    const chunkSize = wav.readUInt32LE(offset + 4)
-    const chunkStart = offset + 8
-    const chunkEnd = chunkStart + chunkSize
-
-    if (chunkEnd > wav.length) break
-    if (chunkId === 'data') return wav.subarray(chunkStart, chunkEnd)
-
-    offset = chunkEnd + (chunkSize % 2)
-  }
-
-  throw new Error('The speech provider returned WAV audio without a data section.')
-}
-
-function createWav(pcm: Buffer, sampleRate: number): Buffer {
-  const header = Buffer.alloc(44)
-  const channels = 1
-  const bitsPerSample = 16
-  const blockAlign = channels * bitsPerSample / 8
-
-  header.write('RIFF', 0)
-  header.writeUInt32LE(36 + pcm.length, 4)
-  header.write('WAVE', 8)
-  header.write('fmt ', 12)
-  header.writeUInt32LE(16, 16)
-  header.writeUInt16LE(1, 20)
-  header.writeUInt16LE(channels, 22)
-  header.writeUInt32LE(sampleRate, 24)
-  header.writeUInt32LE(sampleRate * blockAlign, 28)
-  header.writeUInt16LE(blockAlign, 32)
-  header.writeUInt16LE(bitsPerSample, 34)
-  header.write('data', 36)
-  header.writeUInt32LE(pcm.length, 40)
-
-  return Buffer.concat([header, pcm])
-}
-
-async function synthesizeChunk(text: string, language: TtsLanguage, apiKey: string): Promise<Buffer> {
-  const endpoint = new URL('https://texttospeech.googleapis.com/v1/text:synthesize')
-  endpoint.searchParams.set('key', apiKey)
-
-  const isArabic = language === 'ar'
-  const sampleRate = 24000
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify({
-      input: { text },
-      voice: {
-        languageCode: isArabic ? 'ar-XA' : 'en-US',
-        name: isArabic ? 'ar-XA-Wavenet-B' : 'en-US-Neural2-D',
-      },
-      audioConfig: {
-        audioEncoding: 'LINEAR16',
-        sampleRateHertz: sampleRate,
-        speakingRate: 0.94,
-        audioChannelCount: 1,
-      },
-    }),
-    cache: 'no-store',
-  })
-
-  const result = await response.json().catch(() => null) as GoogleTtsResponse | null
-  if (!response.ok || !result?.audioContent) {
-    console.error('Google Cloud TTS request failed:', response.status, result?.error?.message ?? 'No audio content')
-    throw new Error('Speech synthesis failed.')
-  }
-
-  return getPcmFromWav(Buffer.from(result.audioContent, 'base64'))
-}
+const MAX_CACHE_ENTRIES = 48
+const MAX_TEXT_CHARACTERS = 15000
+const audioCache = new Map<string, CachedAudio>()
 
 function pruneAudioCache() {
   const now = Date.now()
@@ -147,14 +30,154 @@ function pruneAudioCache() {
   }
 }
 
-export async function POST(request: Request) {
-  const apiKey = process.env.TTS_API_KEY || process.env.GOOGLE_TTS_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { code: 'TTS_NOT_CONFIGURED', error: 'Audio reading is not configured yet.' },
-      { status: 503 },
-    )
+function splitTextIntoSentences(text: string, maxChunkLength = 2000): string[] {
+  const sentences = text.match(/[^.!?\n]+[.!?\n]*/g) ?? [text]
+  const chunks: string[] = []
+  let current = ''
+
+  for (const sentence of sentences) {
+    if ((current + sentence).length > maxChunkLength) {
+      if (current.trim()) chunks.push(current.trim())
+      if (sentence.length > maxChunkLength) {
+        // Break long sentence by spaces
+        const words = sentence.split(/\s+/)
+        let wordChunk = ''
+        for (const word of words) {
+          if ((wordChunk + ' ' + word).length > maxChunkLength) {
+            if (wordChunk.trim()) chunks.push(wordChunk.trim())
+            wordChunk = word
+          } else {
+            wordChunk = wordChunk ? `${wordChunk} ${word}` : word
+          }
+        }
+        if (wordChunk.trim()) current = wordChunk
+        else current = ''
+      } else {
+        current = sentence
+      }
+    } else {
+      current += sentence
+    }
   }
+
+  if (current.trim()) chunks.push(current.trim())
+  return chunks.length ? chunks : [text]
+}
+
+async function synthesizeElevenLabs(text: string, language: TtsLanguage, apiKey: string): Promise<Buffer> {
+  const defaultVoiceId = language === 'ar'
+    ? (process.env.ELEVENLABS_ARABIC_VOICE_ID || process.env.ELEVENLABS_AR_VOICE_ID || process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM')
+    : (process.env.ELEVENLABS_ENGLISH_VOICE_ID || process.env.ELEVENLABS_EN_VOICE_ID || process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM')
+
+  const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2'
+  const chunks = splitTextIntoSentences(text, 2200)
+  const audioBuffers: Buffer[] = []
+
+  for (const chunk of chunks) {
+    const endpoint = `https://api.elevenlabs.io/v1/text-to-speech/${defaultVoiceId}`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey.trim(),
+        'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text: chunk,
+        model_id: modelId,
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        },
+      }),
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '')
+      console.error(`ElevenLabs TTS error [${response.status}]:`, errText)
+      throw new Error(`ElevenLabs error: ${response.status}`)
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    audioBuffers.push(Buffer.from(arrayBuffer))
+  }
+
+  return Buffer.concat(audioBuffers)
+}
+
+async function synthesizeGoogleCloudTts(text: string, language: TtsLanguage, apiKey: string): Promise<Buffer> {
+  const endpoint = new URL('https://texttospeech.googleapis.com/v1/text:synthesize')
+  endpoint.searchParams.set('key', apiKey.trim())
+
+  const isArabic = language === 'ar'
+  const chunks = splitTextIntoSentences(text, 1800)
+  const audioBuffers: Buffer[] = []
+
+  for (const chunk of chunks) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        input: { text: chunk },
+        voice: {
+          languageCode: isArabic ? 'ar-XA' : 'en-US',
+          name: isArabic ? 'ar-XA-Wavenet-B' : 'en-US-Neural2-D',
+        },
+        audioConfig: {
+          audioEncoding: 'MP3',
+          speakingRate: 0.94,
+        },
+      }),
+      cache: 'no-store',
+    })
+
+    const result = await response.json().catch(() => null) as { audioContent?: string; error?: { message?: string } } | null
+    if (!response.ok || !result?.audioContent) {
+      console.error('Google Cloud TTS request failed:', response.status, result?.error?.message ?? 'No audio content')
+      throw new Error('Google Cloud TTS synthesis failed.')
+    }
+
+    audioBuffers.push(Buffer.from(result.audioContent, 'base64'))
+  }
+
+  return Buffer.concat(audioBuffers)
+}
+
+async function synthesizeFallback(text: string, language: TtsLanguage): Promise<Buffer> {
+  const chunks = splitTextIntoSentences(text, 180)
+  const audioBuffers: Buffer[] = []
+
+  for (const chunk of chunks) {
+    const endpoint = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${language}&q=${encodeURIComponent(chunk)}`
+    const response = await fetch(endpoint, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(`Fallback TTS error [${response.status}]`)
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    audioBuffers.push(Buffer.from(arrayBuffer))
+  }
+
+  return Buffer.concat(audioBuffers)
+}
+
+export async function POST(request: Request) {
+  const elevenLabsKey =
+    process.env.ELEVENLABS_API_KEY ||
+    process.env.ELEVEN_LABS_API_KEY ||
+    process.env.XI_API_KEY ||
+    (process.env.TTS_API_KEY && !process.env.TTS_API_KEY.startsWith('AIza') ? process.env.TTS_API_KEY : undefined)
+
+  const googleTtsKey =
+    process.env.GOOGLE_TTS_API_KEY ||
+    (process.env.TTS_API_KEY?.startsWith('AIza') ? process.env.TTS_API_KEY : undefined)
 
   const body = await request.json().catch(() => null) as { text?: unknown; language?: unknown } | null
   const text = typeof body?.text === 'string' ? body.text.trim() : ''
@@ -177,7 +200,7 @@ export async function POST(request: Request) {
   if (cached && cached.expiresAt > Date.now()) {
     return new NextResponse(new Uint8Array(cached.audio), {
       headers: {
-        'Content-Type': 'audio/wav',
+        'Content-Type': cached.contentType,
         'Content-Length': String(cached.audio.length),
         'Cache-Control': 'private, max-age=21600',
         'X-Audio-Cache': 'HIT',
@@ -185,31 +208,52 @@ export async function POST(request: Request) {
     })
   }
 
-  try {
-    const chunks = splitTextByByteLimit(text)
-    const pcmChunks: Buffer[] = []
+  let audioBuffer: Buffer | null = null
+  const contentType = 'audio/mpeg'
 
-    for (const chunk of chunks) {
-      pcmChunks.push(await synthesizeChunk(chunk, language, apiKey))
+  // 1. Try ElevenLabs API if key is present
+  if (elevenLabsKey) {
+    try {
+      audioBuffer = await synthesizeElevenLabs(text, language, elevenLabsKey)
+    } catch (error) {
+      console.warn('ElevenLabs synthesis failed, checking fallbacks:', error)
     }
+  }
 
-    const sampleRate = 24000
-    const audio = createWav(Buffer.concat(pcmChunks), sampleRate)
-    audioCache.set(cacheKey, { audio, expiresAt: Date.now() + CACHE_TTL_MS })
-    pruneAudioCache()
+  // 2. Try Google Cloud TTS if key is present and ElevenLabs wasn't used / failed
+  if (!audioBuffer && googleTtsKey) {
+    try {
+      audioBuffer = await synthesizeGoogleCloudTts(text, language, googleTtsKey)
+    } catch (error) {
+      console.warn('Google Cloud TTS synthesis failed, checking fallback:', error)
+    }
+  }
 
-    return new NextResponse(new Uint8Array(audio), {
-      headers: {
-        'Content-Type': 'audio/wav',
-        'Content-Length': String(audio.length),
-        'Cache-Control': 'private, max-age=21600',
-        'X-Audio-Cache': 'MISS',
-      },
-    })
-  } catch {
+  // 3. Fallback TTS if no keys or provider APIs failed
+  if (!audioBuffer) {
+    try {
+      audioBuffer = await synthesizeFallback(text, language)
+    } catch (error) {
+      console.error('All TTS services failed:', error)
+    }
+  }
+
+  if (!audioBuffer || audioBuffer.length === 0) {
     return NextResponse.json(
       { error: 'Voice generation is temporarily unavailable. Please try again.' },
       { status: 502 },
     )
   }
+
+  audioCache.set(cacheKey, { audio: audioBuffer, contentType, expiresAt: Date.now() + CACHE_TTL_MS })
+  pruneAudioCache()
+
+  return new NextResponse(new Uint8Array(audioBuffer), {
+    headers: {
+      'Content-Type': contentType,
+      'Content-Length': String(audioBuffer.length),
+      'Cache-Control': 'private, max-age=21600',
+      'X-Audio-Cache': 'MISS',
+    },
+  })
 }

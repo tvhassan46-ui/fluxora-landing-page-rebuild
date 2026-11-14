@@ -155,6 +155,9 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     const audio = audioRef.current
     audio?.pause()
     if (audio) audio.currentTime = 0
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
     setIsPreparingAudio(false)
     setAudioState('idle')
   }
@@ -225,12 +228,21 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
     if (audioState === 'playing') {
       audio.pause()
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.pause()
+      }
       setAudioState('paused')
       return
     }
 
     if (audioState === 'paused') {
       try {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume()
+          setAudioState('playing')
+          setAudioMessage('')
+          return
+        }
         await audio.play()
         setAudioState('playing')
         setAudioMessage('')
@@ -294,6 +306,34 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     } catch (error) {
       if (requestId !== audioRequestRef.current) return
       if (error instanceof Error && error.name === 'AbortError') return
+
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel()
+          const utterance = new SpeechSynthesisUtterance(textToRead)
+          utterance.lang = language === 'en' ? 'en-US' : 'ar-SA'
+          utterance.rate = 0.95
+          utterance.onend = () => {
+            if (requestId === audioRequestRef.current) {
+              setAudioState('idle')
+              setAudioMessage('')
+            }
+          }
+          utterance.onerror = () => {
+            if (requestId === audioRequestRef.current) {
+              setAudioState('idle')
+              setAudioMessage(copy.voiceError)
+            }
+          }
+          window.speechSynthesis.speak(utterance)
+          setAudioState('playing')
+          setAudioMessage('')
+          return
+        } catch {
+          // fall through
+        }
+      }
+
       setAudioState('idle')
       setAudioMessage(error instanceof Error ? error.message : copy.voiceError)
     } finally {

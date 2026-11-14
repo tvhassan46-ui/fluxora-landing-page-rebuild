@@ -1,31 +1,24 @@
-# LIVA voice and translation setup
+# LIVA Voice and In-Page Translation Setup
 
-## 1. Arabic and English read-aloud
+## 1. ElevenLabs Read-Aloud (Arabic & English)
 
-The reader sends text to the server route `POST /api/tts`. Google Cloud Text-to-Speech creates the audio on the server; the API key is never sent to the browser.
+The reader sends text to `POST /api/tts`. ElevenLabs creates natural voice audio on the server, and the API key is never exposed to the browser.
 
-1. Open Google Cloud Console and select or create a project.
-2. Enable **Cloud Text-to-Speech API** for that project.
-3. Create an API key in **APIs & Services → Credentials**. Restrict the key to the Cloud Text-to-Speech API.
-4. Add the key as `TTS_API_KEY` in Vercel → Project → Settings → Environment Variables.
-5. Redeploy after saving the variable.
+### Setting up ElevenLabs in Vercel:
+1. Go to your [ElevenLabs Dashboard](https://elevenlabs.io/) and copy your API key.
+2. In your Vercel Project:
+   - Go to **Settings → Environment Variables**.
+   - Add `ELEVENLABS_API_KEY` with your key value.
+   - (Optional) You can customize `ELEVENLABS_VOICE_ID`, `ELEVENLABS_ARABIC_VOICE_ID`, or `ELEVENLABS_ENGLISH_VOICE_ID`.
+3. Save and redeploy.
 
-The reader uses an Arabic `ar-XA` WaveNet voice for the original text. When an English translation is active, it reads the translated English text with an English Neural2 voice. Long passages are split under the provider's 5,000-byte input limit and joined into one WAV response. Generated audio is cached in memory for repeat requests.
+The system also supports `TTS_API_KEY`, `XI_API_KEY`, and Google Cloud Text-to-Speech (`GOOGLE_TTS_API_KEY`). If any provider is temporarily unreachable, an automatic fallback ensures that audio reading continues to function.
 
-Do not name this variable `NEXT_PUBLIC_TTS_API_KEY`: it must remain server-side.
+## 2. In-Page Arabic-to-English Translation
 
-## 2. Arabic-to-English translation
+When a reader clicks "ترجم إلى الإنجليزية" (Translate to English), the text is translated directly within the reader on the same page. No external redirects or Google Translate tabs are opened.
 
-Translation uses the Vercel AI Gateway with the stable Google Gemini 3.8 Flash model.
-
-- In a Vercel deployment, AI Gateway can authenticate model calls through Vercel OIDC.
-- For local development or a non-Vercel host, create an AI Gateway key and set `AI_GATEWAY_API_KEY` in `.env.local` or the hosting provider's server environment.
-- Never use a `NEXT_PUBLIC_` prefix for this key.
-
-The translation endpoint is the existing `POST /api/library/[bookId]` route. It keeps paragraph breaks and caches generated translations in memory.
-
-## 3. Local setup
-
-Copy `.env.example` to `.env.local`, fill in the keys, and restart the development server.
-
-The API keys are not stored in the repository. Add the same variables in Vercel for each environment (Preview and Production) where you want the features enabled.
+- The translation endpoint is `POST /api/library/[bookId]`.
+- If Vercel AI Gateway / Gemini (`AI_GATEWAY_API_KEY`) is configured, high-quality literary translation is used.
+- If AI Gateway is not configured, automatic server-side translation is used as a fallback, preserving all paragraph breaks and formatting.
+- Clicking the button again toggles back to the original Arabic text instantly.
