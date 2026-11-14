@@ -18,6 +18,9 @@ const MAX_CACHE_ENTRIES = 48
 const MAX_TEXT_CHARACTERS = 15000
 const audioCache = new Map<string, CachedAudio>()
 
+export const DEFAULT_ARABIC_VOICE_ID = 'Ix8C14HEHgIQkJswik2o'
+export const DEFAULT_ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'
+
 function pruneAudioCache() {
   const now = Date.now()
   for (const [key, entry] of audioCache) {
@@ -64,20 +67,11 @@ function splitTextIntoSentences(text: string, maxChunkLength = 1200): string[] {
   return chunks.length ? chunks : [text]
 }
 
-const DEFAULT_ARABIC_VOICE_ID = 'Ix8C14HEHgIQkJswik2o'
-
-async function getElevenLabsVoiceId(apiKey: string, language: TtsLanguage): Promise<string> {
-  const configured = language === 'ar'
-    ? (process.env.ELEVENLABS_ARABIC_VOICE_ID || process.env.ELEVENLABS_AR_VOICE_ID || process.env.ELEVENLABS_VOICE_ID)
-    : (process.env.ELEVENLABS_ENGLISH_VOICE_ID || process.env.ELEVENLABS_EN_VOICE_ID || process.env.ELEVENLABS_VOICE_ID)
-
-  if (configured && configured.trim()) return configured.trim()
-
-  return DEFAULT_ARABIC_VOICE_ID
-}
-
-async function synthesizeElevenLabs(text: string, language: TtsLanguage, apiKey: string): Promise<Buffer> {
-  const voiceId = await getElevenLabsVoiceId(apiKey, language)
+async function synthesizeElevenLabsWithVoice(
+  text: string,
+  voiceId: string,
+  apiKey: string,
+): Promise<Buffer> {
   const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2'
   const chunks = splitTextIntoSentences(text, 1000)
   const audioBuffers: Buffer[] = []
@@ -104,8 +98,7 @@ async function synthesizeElevenLabs(text: string, language: TtsLanguage, apiKey:
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '')
-      console.error(`ElevenLabs TTS error [${response.status}]:`, errText)
-      throw new Error(`ElevenLabs error ${response.status}: ${errText}`)
+      throw new Error(`[${response.status}] ${errText || response.statusText}`)
     }
 
     const arrayBuffer = await response.arrayBuffer()
@@ -141,9 +134,11 @@ async function synthesizeGoogleCloudTts(text: string, language: TtsLanguage, api
       cache: 'no-store',
     })
 
-    const result = await response.json().catch(() => null) as { audioContent?: string; error?: { message?: string } } | null
+    const result = (await response.json().catch(() => null)) as {
+      audioContent?: string
+      error?: { message?: string }
+    } | null
     if (!response.ok || !result?.audioContent) {
-      console.error('Google Cloud TTS request failed:', response.status, result?.error?.message ?? 'No audio content')
       throw new Error('Google Cloud TTS synthesis failed.')
     }
 
@@ -161,7 +156,8 @@ async function synthesizeFallback(text: string, language: TtsLanguage): Promise<
     const endpoint = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${language}&q=${encodeURIComponent(chunk)}`
     const response = await fetch(endpoint, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
       cache: 'no-store',
     })
@@ -178,19 +174,15 @@ async function synthesizeFallback(text: string, language: TtsLanguage): Promise<
 }
 
 export async function POST(request: Request) {
-  const elevenLabsKey =
-    process.env.ELEVENLABS_API_KEY ||
-    process.env.ELEVEN_LABS_API_KEY ||
-    process.env.XI_API_KEY ||
-    (process.env.TTS_API_KEY && !process.env.TTS_API_KEY.startsWith('AIza') ? process.env.TTS_API_KEY : undefined)
+  const body = (await request.json().catch(() => null)) as {
+    text?: unknown
+    language?: unknown
+    voiceId?: unknown
+  } | null
 
-  const googleTtsKey =
-    process.env.GOOGLE_TTS_API_KEY ||
-    (process.env.TTS_API_KEY?.startsWith('AIza') ? process.env.TTS_API_KEY : undefined)
-
-  const body = await request.json().catch(() => null) as { text?: unknown; language?: unknown } | null
   const text = typeof body?.text === 'string' ? body.text.trim() : ''
   const language = body?.language === 'en' ? 'en' : body?.language === 'ar' ? 'ar' : null
+  const requestedVoiceId = typeof body?.voiceId === 'string' && body.voiceId.trim() ? body.voiceId.trim() : null
 
   if (!text) {
     return NextResponse.json({ error: 'Text is required.' }, { status: 400 })
@@ -202,13 +194,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This passage is too long to read in one request.' }, { status: 413 })
   }
 
-  const cacheKey = createHash('sha256').update(language + '\u0000' + text).digest('hex')
+  const selectedVoiceId = requestedVoiceId || (language === 'ar' ? DEFAULT_ARABIC_VOICE_ID : DEFAULT_ELEVENLABS_VOICE_ID)
+
+  // Candidate ElevenLabs keys in order of precedence
+  const rawCandidateKeys = [
+    process.env.ELEVENLABS_API_KEY,
+    process.env.ELEVEN_LABS_API_KEY,
+    process.env.XI_API_KEY,
+    process.env.TTS_API_KEY && !process.env.TTS_API_KEY.startsWith('AIza') ? process.env.TTS_API_KEY : undefined,
+  ]
+  const candidateKeys = Array.from(new Set(rawCandidateKeys.filter((k): k is string => Boolean(k && k.trim()))))
+
+  const googleTtsKey =
+    process.env.GOOGLE_TTS_API_KEY ||
+    (process.env.TTS_API_KEY?.startsWith('AIza') ? process.env.TTS_API_KEY : undefined)
+
+  const cacheKey = createHash('sha256').update(`${language}\0${selectedVoiceId}\0${text}`).digest('hex')
   pruneAudioCache()
   const cached = audioCache.get(cacheKey)
 
   if (cached && cached.expiresAt > Date.now()) {
-    // If we have an ElevenLabs key but the cached audio was from fallback/Google, regenerate with ElevenLabs!
-    if (!elevenLabsKey || cached.provider === 'elevenlabs') {
+    if (candidateKeys.length === 0 || cached.provider === 'elevenlabs') {
       return new NextResponse(new Uint8Array(cached.audio), {
         headers: {
           'Content-Type': cached.contentType,
@@ -216,6 +222,7 @@ export async function POST(request: Request) {
           'Cache-Control': 'private, max-age=21600',
           'X-Audio-Cache': 'HIT',
           'X-TTS-Provider': cached.provider,
+          'X-TTS-Voice': selectedVoiceId,
         },
       })
     }
@@ -223,19 +230,35 @@ export async function POST(request: Request) {
 
   let audioBuffer: Buffer | null = null
   let provider = 'fallback'
+  let lastElevenLabsError = ''
   const contentType = 'audio/mpeg'
 
-  // 1. Try ElevenLabs API if key is present
-  if (elevenLabsKey) {
+  // 1. Try ElevenLabs API with candidate keys
+  for (const apiKey of candidateKeys) {
     try {
-      audioBuffer = await synthesizeElevenLabs(text, language, elevenLabsKey)
+      // First try the requested voice
+      audioBuffer = await synthesizeElevenLabsWithVoice(text, selectedVoiceId, apiKey)
       provider = 'elevenlabs'
-    } catch (error) {
-      console.warn('ElevenLabs synthesis failed:', error)
+      break
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      console.warn(`ElevenLabs with voice [${selectedVoiceId}] failed:`, errMsg)
+      lastElevenLabsError = errMsg
+
+      // If voice was not found (400 or 404), try fallback to default ElevenLabs voice with same key
+      if ((errMsg.includes('400') || errMsg.includes('404') || errMsg.includes('voice_not_found')) && selectedVoiceId !== DEFAULT_ELEVENLABS_VOICE_ID) {
+        try {
+          audioBuffer = await synthesizeElevenLabsWithVoice(text, DEFAULT_ELEVENLABS_VOICE_ID, apiKey)
+          provider = 'elevenlabs'
+          break
+        } catch (innerErr) {
+          console.warn(`ElevenLabs default voice also failed:`, innerErr)
+        }
+      }
     }
   }
 
-  // 2. Try Google Cloud TTS if key is present and ElevenLabs wasn't used / failed
+  // 2. Try Google Cloud TTS if ElevenLabs wasn't configured or failed
   if (!audioBuffer && googleTtsKey) {
     try {
       audioBuffer = await synthesizeGoogleCloudTts(text, language, googleTtsKey)
@@ -265,13 +288,20 @@ export async function POST(request: Request) {
   audioCache.set(cacheKey, { audio: audioBuffer, contentType, provider, expiresAt: Date.now() + CACHE_TTL_MS })
   pruneAudioCache()
 
+  const responseHeaders: Record<string, string> = {
+    'Content-Type': contentType,
+    'Content-Length': String(audioBuffer.length),
+    'Cache-Control': 'private, max-age=21600',
+    'X-Audio-Cache': 'MISS',
+    'X-TTS-Provider': provider,
+    'X-TTS-Voice': selectedVoiceId,
+  }
+
+  if (lastElevenLabsError && provider !== 'elevenlabs') {
+    responseHeaders['X-TTS-Notice'] = encodeURIComponent(lastElevenLabsError.slice(0, 160))
+  }
+
   return new NextResponse(new Uint8Array(audioBuffer), {
-    headers: {
-      'Content-Type': contentType,
-      'Content-Length': String(audioBuffer.length),
-      'Cache-Control': 'private, max-age=21600',
-      'X-Audio-Cache': 'MISS',
-      'X-TTS-Provider': provider,
-    },
+    headers: responseHeaders,
   })
 }

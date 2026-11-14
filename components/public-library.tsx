@@ -106,6 +106,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const [isEnglish, setIsEnglish] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
   const [translationMessage, setTranslationMessage] = useState('')
+  const [voiceId, setVoiceId] = useState<string>('Ix8C14HEHgIQkJswik2o')
   const readerRef = useRef<HTMLElement>(null)
   const chapterKeyRef = useRef<string | null>(null)
   const activeBook = books.find((book) => book.id === selection?.bookId)
@@ -139,7 +140,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     setAudioState('idle')
     setIsPreparingAudio(false)
     setAudioMessage('')
-  }, [chapterKey, isEnglish])
+  }, [chapterKey, isEnglish, voiceId])
 
   useEffect(() => () => {
     audioAbortRef.current?.abort()
@@ -260,7 +261,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
     const language = isEnglish && translatedText ? 'en' : 'ar'
     const textToRead = isEnglish && translatedText ? translatedText : currentChapter.join(String.fromCharCode(10, 10))
-    const cacheKey = language + '|' + textToRead
+    const cacheKey = language + '|' + voiceId + '|' + textToRead
     const cachedUrl = audioUrlCacheRef.current.get(cacheKey)
     const requestId = ++audioRequestRef.current
 
@@ -275,13 +276,22 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
         const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToRead, language }),
+          body: JSON.stringify({ text: textToRead, language, voiceId }),
           signal: controller.signal,
         })
 
         if (!response.ok) {
           const result = await response.json().catch(() => null) as { error?: unknown; code?: unknown } | null
-          throw new Error(result?.code === 'TTS_NOT_CONFIGURED' ? copy.voiceNotConfigured : copy.voiceError)
+          throw new Error(result?.code === 'TTS_NOT_CONFIGURED' ? copy.voiceNotConfigured : (typeof result?.error === 'string' ? result.error : copy.voiceError))
+        }
+
+        const ttsNotice = response.headers.get('X-TTS-Notice')
+        if (ttsNotice) {
+          try {
+            setAudioMessage(decodeURIComponent(ttsNotice))
+          } catch {
+            setAudioMessage(ttsNotice)
+          }
         }
 
         const audioBlob = await response.blob()
@@ -425,6 +435,22 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <p>{activeBookTranslation?.author ?? activeBook.author} · {activeBookTranslation?.genreLabel ?? activeBook.genreLabel}</p>
               </div>
               <div className="reader-tools" aria-label={copy.readerSettings}>
+                <div className="voice-select-wrap">
+                  <select
+                    className="voice-select"
+                    value={voiceId}
+                    onChange={(e) => {
+                      stopAudio()
+                      setVoiceId(e.target.value)
+                      setAudioMessage('')
+                    }}
+                    aria-label={locale === 'ar' ? 'اختيار صوت القراءة' : 'Select reading voice'}
+                    title={locale === 'ar' ? 'تبديل صوت ElevenLabs' : 'Switch ElevenLabs voice'}
+                  >
+                    <option value="Ix8C14HEHgIQkJswik2o">{locale === 'ar' ? 'الصوت المخصص (Ix8C14)' : 'Custom Voice (Ix8C14)'}</option>
+                    <option value="21m00Tcm4TlvDq8ikWAM">{locale === 'ar' ? 'الصوت الافتراضي (راشيل)' : 'Default Voice (Rachel)'}</option>
+                  </select>
+                </div>
                 <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? copy.showArabic : copy.translate}>
                   <Languages aria-hidden="true" />{isTranslating ? copy.translating : isEnglish ? copy.showArabic : copy.translate}
                 </button>
