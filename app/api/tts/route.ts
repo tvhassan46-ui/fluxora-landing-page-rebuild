@@ -18,8 +18,6 @@ const MAX_CACHE_ENTRIES = 48
 const MAX_TEXT_CHARACTERS = 15000
 const audioCache = new Map<string, CachedAudio>()
 
-const resolvedVoiceCache = new Map<string, { voiceId: string; expiresAt: number }>()
-
 function pruneAudioCache() {
   const now = Date.now()
   for (const [key, entry] of audioCache) {
@@ -66,6 +64,8 @@ function splitTextIntoSentences(text: string, maxChunkLength = 1200): string[] {
   return chunks.length ? chunks : [text]
 }
 
+const DEFAULT_ARABIC_VOICE_ID = 'Ix8C14HEHgIQkJswik2o'
+
 async function getElevenLabsVoiceId(apiKey: string, language: TtsLanguage): Promise<string> {
   const configured = language === 'ar'
     ? (process.env.ELEVENLABS_ARABIC_VOICE_ID || process.env.ELEVENLABS_AR_VOICE_ID || process.env.ELEVENLABS_VOICE_ID)
@@ -73,50 +73,7 @@ async function getElevenLabsVoiceId(apiKey: string, language: TtsLanguage): Prom
 
   if (configured && configured.trim()) return configured.trim()
 
-  const cacheKey = apiKey.slice(-6) + ':' + language
-  const cached = resolvedVoiceCache.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.voiceId
-  }
-
-  try {
-    const res = await fetch('https://api.elevenlabs.io/v1/voices', {
-      headers: { 'xi-api-key': apiKey.trim() },
-      cache: 'no-store',
-    })
-
-    if (res.ok) {
-      const data = await res.json() as { voices?: Array<{ voice_id: string; name?: string; labels?: Record<string, string> }> }
-      const voices = data.voices || []
-
-      if (voices.length > 0) {
-        let picked = voices.find((v) =>
-          language === 'ar'
-            ? (v.name?.toLowerCase().includes('arabic') || v.labels?.accent?.toLowerCase().includes('arabic') || v.labels?.language?.toLowerCase().includes('ar'))
-            : (v.name?.toLowerCase().includes('english') || v.labels?.language?.toLowerCase().includes('en'))
-        )
-
-        if (!picked) {
-          picked = voices.find((v) => v.voice_id === '21m00Tcm4TlvDq8ikWAM' || v.voice_id === 'pNInz6obpgDQGcFmaJgB')
-        }
-
-        if (!picked) {
-          picked = voices[0]
-        }
-
-        if (picked) {
-          resolvedVoiceCache.set(cacheKey, { voiceId: picked.voice_id, expiresAt: Date.now() + 3600000 })
-          return picked.voice_id
-        }
-      }
-    } else {
-      console.warn(`ElevenLabs voices list query returned HTTP ${res.status}`)
-    }
-  } catch (err) {
-    console.warn('Could not query ElevenLabs voices list:', err)
-  }
-
-  return '21m00Tcm4TlvDq8ikWAM'
+  return DEFAULT_ARABIC_VOICE_ID
 }
 
 async function synthesizeElevenLabs(text: string, language: TtsLanguage, apiKey: string): Promise<Buffer> {
@@ -250,15 +207,18 @@ export async function POST(request: Request) {
   const cached = audioCache.get(cacheKey)
 
   if (cached && cached.expiresAt > Date.now()) {
-    return new NextResponse(new Uint8Array(cached.audio), {
-      headers: {
-        'Content-Type': cached.contentType,
-        'Content-Length': String(cached.audio.length),
-        'Cache-Control': 'private, max-age=21600',
-        'X-Audio-Cache': 'HIT',
-        'X-TTS-Provider': cached.provider,
-      },
-    })
+    // If we have an ElevenLabs key but the cached audio was from fallback/Google, regenerate with ElevenLabs!
+    if (!elevenLabsKey || cached.provider === 'elevenlabs') {
+      return new NextResponse(new Uint8Array(cached.audio), {
+        headers: {
+          'Content-Type': cached.contentType,
+          'Content-Length': String(cached.audio.length),
+          'Cache-Control': 'private, max-age=21600',
+          'X-Audio-Cache': 'HIT',
+          'X-TTS-Provider': cached.provider,
+        },
+      })
+    }
   }
 
   let audioBuffer: Buffer | null = null
