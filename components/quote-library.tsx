@@ -15,6 +15,9 @@ export function QuoteLibrary() {
   const { locale } = useLanguage()
   const copy = getQuotesCopy(locale)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [translatedQuotes, setTranslatedQuotes] = useState<Record<string, string>>({})
+  const [translatingId, setTranslatingId] = useState<string | null>(null)
+  const [translationError, setTranslationError] = useState<string | null>(null)
 
   async function copyQuote(id: string, lines: string[]) {
     try {
@@ -40,9 +43,34 @@ export function QuoteLibrary() {
     }
   }
 
-  function translateQuote(lines: string[]) {
-    const text = lines.join('\n')
-    window.open(`https://translate.google.com/?sl=ar&tl=en&text=${encodeURIComponent(text)}&op=translate`, '_blank', 'noopener,noreferrer')
+  async function translateQuote(id: string, lines: string[]) {
+    if (translatedQuotes[id]) {
+      setTranslatedQuotes((current) => {
+        const next = { ...current }
+        delete next[id]
+        return next
+      })
+      return
+    }
+
+    setTranslatingId(id)
+    setTranslationError(null)
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: lines.join('\n') }),
+      })
+      const result = await response.json().catch(() => null) as { translation?: unknown; error?: unknown } | null
+      if (!response.ok || typeof result?.translation !== 'string') {
+        throw new Error(typeof result?.error === 'string' ? result.error : 'Translation failed. Please try again.')
+      }
+      setTranslatedQuotes((current) => ({ ...current, [id]: result.translation as string }))
+    } catch (error) {
+      setTranslationError(error instanceof Error ? error.message : 'Translation failed. Please try again.')
+    } finally {
+      setTranslatingId(null)
+    }
   }
 
   return (
@@ -61,11 +89,13 @@ export function QuoteLibrary() {
         {publicQuotes.map((quote, index) => {
           const translated = locale === 'en' ? quoteTranslations[quote.id] : undefined
           const lines = translated?.lines ?? quote.lines
+          const translatedLines = translatedQuotes[quote.id]?.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+          const displayedLines = translatedLines?.length ? translatedLines : lines
           return (
             <article className="quote-card" key={quote.id}>
               <span className="quote-number">0{index + 1}</span>
               <Quote className="quote-mark" aria-hidden="true" />
-              <blockquote>{lines.map((line) => <p key={line}>{line}</p>)}</blockquote>
+              <blockquote>{displayedLines.map((line) => <p key={line}>{line}</p>)}</blockquote>
               <div className="quote-credit"><span>{translated?.author ?? quote.author}</span><a href={quote.sourceUrl} target="_blank" rel="noreferrer">{copy.source} <ExternalLink aria-hidden="true" /></a></div>
               <button type="button" className="copy-quote-button" onClick={() => void copyQuote(quote.id, lines)}>
                 {copiedId === quote.id ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
@@ -74,9 +104,10 @@ export function QuoteLibrary() {
               <button type="button" className="copy-quote-button" onClick={() => void listenQuote(lines)}>
                 {locale === 'ar' ? 'استمع' : 'Listen'}
               </button>
-              <button type="button" className="copy-quote-button" onClick={() => translateQuote(lines)}>
+              <button type="button" className="copy-quote-button" onClick={() => void translateQuote(quote.id, lines)} disabled={translatingId === quote.id}>
                 {locale === 'ar' ? 'ترجم' : 'Translate'}
               </button>
+              {translationError && translatingId === null && <p className="audio-status" role="alert">{translationError}</p>}
             </article>
           )
         })}

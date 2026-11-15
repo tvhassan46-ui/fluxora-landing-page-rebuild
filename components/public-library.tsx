@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import useSWR from 'swr'
-import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Headphones, Languages, Library, Pause, Play, RotateCw } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ExternalLink, Headphones, Library, Pause, Play, RotateCw } from 'lucide-react'
 import { publicBooks, type PublicBook } from '@/lib/reader-catalog'
 import { LanguageSwitch } from '@/components/language-switch'
 import { useLanguage } from '@/components/language-provider'
@@ -104,7 +104,6 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const audioRequestRef = useRef(0)
   const audioUrlCacheRef = useRef<Map<string, string>>(new Map())
   const [translations, setTranslations] = useState<Record<string, string>>({})
-  const [isEnglish, setIsEnglish] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
   const [translationMessage, setTranslationMessage] = useState('')
   const [voiceId, setVoiceId] = useState<string>('ar-SA-HamedNeural')
@@ -144,9 +143,45 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const chapterKey = readerKey ? `${readerKey}:${chapterIndex}` : null
   chapterKeyRef.current = chapterKey
   const translatedText = chapterKey ? translations[chapterKey] : undefined
+  const isEnglish = locale === 'en'
   const displayedParagraphs = isEnglish && translatedText
     ? translatedText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean)
     : currentChapter
+
+  useEffect(() => {
+    if (!isEnglish || !readerKey || !chapterKey || !currentChapter.length || translatedText) return
+
+    const controller = new AbortController()
+    const requestedChapterKey = chapterKey
+    setIsTranslating(true)
+    setTranslationMessage('')
+
+    void fetch(readerKey, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: currentChapter.join('\n\n') }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const result = await response.json().catch(() => null) as { translation?: unknown; error?: unknown } | null
+        if (!response.ok || typeof result?.translation !== 'string') {
+          throw new Error(typeof result?.error === 'string' ? result.error : copy.translationFailed)
+        }
+        if (chapterKeyRef.current !== requestedChapterKey) return
+        setTranslations((current) => ({ ...current, [requestedChapterKey]: result.translation as string }))
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === 'AbortError') return
+        if (chapterKeyRef.current === requestedChapterKey) {
+          setTranslationMessage(error instanceof Error ? error.message : copy.translateError)
+        }
+      })
+      .finally(() => {
+        if (chapterKeyRef.current === requestedChapterKey) setIsTranslating(false)
+      })
+
+    return () => controller.abort()
+  }, [isEnglish, readerKey, chapterKey, currentChapter, translatedText, copy.translationFailed, copy.translateError])
 
   useEffect(() => {
     audioRequestRef.current += 1
@@ -183,7 +218,6 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     setChapterIndex(0)
     setAudioState('idle')
     setAudioMessage('')
-    setIsEnglish(false)
     setTranslationMessage('')
     setSelection({ bookId: book.id, episodeId: firstEpisode.id })
     window.requestAnimationFrame(() => readerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
@@ -194,51 +228,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
     setChapterIndex(0)
     setAudioState('idle')
     setAudioMessage('')
-    setIsEnglish(false)
     setTranslationMessage('')
     setSelection({ bookId: book.id, episodeId })
-  }
-
-  async function toggleEnglishTranslation() {
-    if (!readerKey || !chapterKey || !currentChapter.length) return
-
-    stopAudio()
-    setAudioMessage('')
-    setTranslationMessage('')
-
-    if (translatedText) {
-      setIsEnglish((current) => !current)
-      return
-    }
-
-    const requestedChapterKey = chapterKey
-    setIsTranslating(true)
-
-    try {
-      const response = await fetch(readerKey, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: currentChapter.join('\n\n') }),
-      })
-      const result = await response.json().catch(() => null) as { translation?: unknown; error?: unknown } | null
-
-      if (!response.ok || typeof result?.translation !== 'string') {
-        throw new Error(typeof result?.error === 'string' ? result.error : copy.translationFailed)
-      }
-
-      // Only apply the result if the reader is still on the chapter that was requested.
-      // This also makes the successful response the single source of truth for switching
-      // the rendered text to English.
-      if (chapterKeyRef.current !== requestedChapterKey) return
-      setTranslations((current) => ({ ...current, [requestedChapterKey]: result.translation as string }))
-      setIsEnglish(true)
-    } catch (error) {
-      if (chapterKeyRef.current === requestedChapterKey) {
-        setTranslationMessage(error instanceof Error ? error.message : copy.translateError)
-      }
-    } finally {
-      setIsTranslating(false)
-    }
   }
 
   async function toggleAudio() {
@@ -436,9 +427,6 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                     ))}
                   </select>
                 </div>
-                <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? copy.showArabic : copy.translate}>
-                  <Languages aria-hidden="true" />{isTranslating ? copy.translating : isEnglish ? copy.showArabic : copy.translate}
-                </button>
                 <button className="audio-button" type="button" onClick={() => void toggleAudio()} disabled={!currentChapter.length || isPreparingAudio} aria-busy={isPreparingAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? copy.pause : audioState === 'paused' ? copy.resume : copy.listen}>
                   {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
                   {isPreparingAudio ? copy.preparingAudio : audioState === 'playing' ? copy.pauseLabel : audioState === 'paused' ? copy.resumeLabel : copy.listenLabel}
@@ -447,6 +435,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                 <button type="button" onClick={() => setFontSize((size) => Math.min(1.8, +(size + 0.1).toFixed(1)))} aria-label={copy.increaseFont}>A+</button>
               </div>
             </div>
+            {isTranslating && <p className="audio-status" role="status">{copy.translating}</p>}
             {translationMessage && <p className="audio-status" role="alert">{translationMessage}</p>}
             {audioMessage && <p className="audio-status" role="status">{audioMessage}</p>}
             {activeBook.episodes.length > 1 && (
@@ -461,7 +450,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             {chapters.length > 1 && (
               <nav className="episode-nav chapter-nav" aria-label={`${copy.chapters} ${activeBookTitle}`}>
                 {chapters.map((_, index) => (
-                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { stopAudio(); setChapterIndex(index); setAudioMessage(''); setIsEnglish(false); setTranslationMessage('') }}>
+                  <button key={index} type="button" className={index === chapterIndex ? 'is-selected' : ''} aria-pressed={index === chapterIndex} onClick={() => { stopAudio(); setChapterIndex(index); setAudioMessage(''); setTranslationMessage('') }}>
                     <span>{activeBook.episodes.length > 1 ? activeEpisodeTitle : activeBookTitle}</span>{copy.chapter} {String(index + 1).padStart(2, '0')}
                   </button>
                 ))}
@@ -477,7 +466,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
             {data && !isLoading && (
               <>
                 <div className="reader-text" dir={isEnglish ? 'ltr' : 'rtl'} lang={isEnglish ? 'en' : 'ar'} aria-live="polite" style={{ fontSize: `${fontSize}rem` }}>
-                  <p className="reader-language-note">{isEnglish ? (locale === 'ar' ? 'الترجمة الإنجليزية' : 'English translation') : copy.originalArabic}</p>
+                  <p className="reader-language-note">{isEnglish ? 'English translation' : copy.originalArabic}</p>
                   {displayedParagraphs.map((paragraph, index) => <p key={`${chapterIndex}-${isEnglish ? 'en' : 'ar'}-${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
                 </div>
                 <footer className="reader-source">
