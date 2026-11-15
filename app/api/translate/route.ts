@@ -13,8 +13,8 @@ async function translateWithFallback(sourceText: string): Promise<string> {
   for (const paragraph of sourceText.split(/\n{2,}/)) {
     const trimmed = paragraph.trim()
     if (!trimmed) continue
-    const endpoint = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(trimmed)}`
-    const response = await fetch(endpoint, { headers: { 'User-Agent': 'LIVA-Reader/1.0' }, cache: 'no-store' })
+    const endpoint = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&ie=UTF-8&oe=UTF-8&q=${encodeURIComponent(trimmed)}`
+    const response = await fetch(endpoint, { headers: { Accept: 'application/json', 'User-Agent': 'LIVA-Reader/1.0' }, cache: 'no-store' })
     if (!response.ok) throw new Error(`Fallback translation failed with status ${response.status}`)
     const data = (await response.json()) as unknown[]
     if (!Array.isArray(data[0])) throw new Error('Translation response had an unexpected format.')
@@ -38,16 +38,18 @@ export async function POST(request: Request) {
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json({ translation: cached.translation })
 
   let translation = ''
-  try {
-    const result = await generateText({
-      model: gateway('google/gemini-3.8-flash'),
-      system: 'Translate the Arabic text into faithful, natural English. Preserve paragraph breaks. Return only the translation, with no commentary.',
-      prompt: sourceText,
-      maxOutputTokens: 8192,
-    })
-    translation = result.text.trim()
-  } catch (error) {
-    console.warn('AI translation unavailable, using server-side fallback:', error)
+  if (process.env.AI_GATEWAY_API_KEY) {
+    try {
+      const result = await generateText({
+        model: gateway('google/gemini-3.8-flash'),
+        system: 'Translate the Arabic text into faithful, natural English. Preserve paragraph breaks. Return only the translation, with no commentary.',
+        prompt: sourceText,
+        maxOutputTokens: 8192,
+      })
+      translation = result.text.trim()
+    } catch (error) {
+      console.warn('AI translation unavailable, using server-side fallback:', error)
+    }
   }
 
   if (!translation) {

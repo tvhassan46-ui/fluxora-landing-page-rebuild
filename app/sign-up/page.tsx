@@ -7,7 +7,9 @@ import { auth } from '@/lib/auth'
 export const metadata: Metadata = { title: 'Create account | LIVA' }
 
 export default async function SignUpPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = process.env.DATABASE_URL
+    ? await auth.api.getSession({ headers: await headers() })
+    : null
   if (session?.user) redirect('/dashboard')
   return <AuthForm mode="sign-up" />
 }

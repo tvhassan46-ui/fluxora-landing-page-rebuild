@@ -23,9 +23,10 @@ async function translateViaFallback(sourceText: string): Promise<string> {
     const trimmed = para.trim()
     if (!trimmed) continue
 
-    const endpoint = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&q=${encodeURIComponent(trimmed)}`
+    const endpoint = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&ie=UTF-8&oe=UTF-8&q=${encodeURIComponent(trimmed)}`
     const response = await fetch(endpoint, {
       headers: {
+        Accept: 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
       cache: 'no-store',
@@ -81,21 +82,21 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   let translation = ''
 
-  // 1. Try Vercel AI Gateway / Gemini first if available
-  try {
-    const { text } = await generateText({
-      model: gateway('google/gemini-3.8-flash'),
-      system:
-        'You are a careful Arabic-to-English literary translator. Translate the provided Arabic text faithfully into clear English. Preserve paragraph breaks, names, imagery, and meaning. Do not summarize, omit, or add commentary. Return only the English translation.',
-      prompt: sourceText,
-      maxOutputTokens: 8192,
-    })
+  // Use the AI provider when configured; otherwise go directly to the no-key fallback.
+  if (process.env.AI_GATEWAY_API_KEY) {
+    try {
+      const { text } = await generateText({
+        model: gateway('google/gemini-3.8-flash'),
+        system:
+          'You are a careful Arabic-to-English literary translator. Translate the provided Arabic text faithfully into clear English. Preserve paragraph breaks, names, imagery, and meaning. Do not summarize, omit, or add commentary. Return only the English translation.',
+        prompt: sourceText,
+        maxOutputTokens: 8192,
+      })
 
-    if (text?.trim()) {
-      translation = text.trim()
+      if (text?.trim()) translation = text.trim()
+    } catch (aiError) {
+      console.warn('AI Gateway translation failed, attempting server-side fallback:', aiError)
     }
-  } catch (aiError) {
-    console.warn('AI Gateway translation failed, attempting server-side fallback:', aiError)
   }
 
   // 2. If AI translation was unavailable or failed, use server-side fallback

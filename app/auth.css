@@ -37,3 +37,62 @@
   .auth-back{margin-bottom:19px}
   .auth-page:not(.dashboard-page) .auth-footer{bottom:14px}
 }
+
+/* Owl Login reference styling */
+.auth-page:not(.dashboard-page) {
+  min-height: max(100vh, 620px);
+  padding: 40px 20px 64px;
+  background: radial-gradient(440px 340px at 50% 30%, #1c1c22, #111114 70%);
+  color: #ece8e1;
+}
+.auth-page:not(.dashboard-page) .auth-stage { width: min(320px, 100%); }
+.auth-page:not(.dashboard-page) .auth-owl {
+  width: min(308px, 82vw);
+  height: auto;
+  margin-bottom: -17.5px;
+}
+.auth-page:not(.dashboard-page) .auth-card {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 26px 22px 18px;
+  border-radius: 22px;
+  background: #1b1b20;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 7%), 0 30px 60px -30px rgb(0 0 0 / 90%);
+}
+.auth-page:not(.dashboard-page) .auth-card h1 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+}
+.auth-page:not(.dashboard-page) .auth-intro {
+  margin: 6px 0 18px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #8e8a93;
+}
+.auth-page:not(.dashboard-page) .auth-form { gap: 10px; margin-top: 0; }
+.auth-page:not(.dashboard-page) .auth-field input {
+  height: 42px;
+  margin: 0;
+  border-radius: 12px;
+  background: #131317;
+  color: #ece8e1;
+  font-size: 15px;
+}
+.auth-page:not(.dashboard-page) .auth-submit {
+  height: 44px;
+  min-height: 44px;
+  margin-top: 4px;
+  border-radius: 12px;
+  background: #f0a33a;
+  color: #1e1405;
+  font-size: 15.5px;
+}
+.auth-page:not(.dashboard-page) .auth-submit svg { display: none; }
+.auth-page:not(.dashboard-page) .auth-switch { margin-top: 15px; }
+@media(max-width:520px) {
+  .auth-page:not(.dashboard-page) { padding: 40px 18px 64px; }
+  .auth-page:not(.dashboard-page) .auth-stage { width: min(320px, 100%); }
+  .auth-page:not(.dashboard-page) .auth-owl { width: min(264px, 82vw); margin-bottom: -14px; }
+}

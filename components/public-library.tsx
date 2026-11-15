@@ -261,7 +261,10 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
 
     const language = isEnglish && translatedText ? 'en' : 'ar'
     const textToRead = isEnglish && translatedText ? translatedText : currentChapter.join(String.fromCharCode(10, 10))
-    const cacheKey = language + '|' + voiceId + '|' + textToRead
+    const selectedVoiceId = voiceId.startsWith(language === 'en' ? 'en-' : 'ar-')
+      ? voiceId
+      : language === 'en' ? 'en-US-GuyNeural' : 'ar-SA-HamedNeural'
+    const cacheKey = language + '|' + selectedVoiceId + '|' + textToRead
     const cachedUrl = audioUrlCacheRef.current.get(cacheKey)
     const requestId = ++audioRequestRef.current
 
@@ -276,7 +279,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
         const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToRead, language, voiceId }),
+          body: JSON.stringify({ text: textToRead, language, voiceId: selectedVoiceId }),
           signal: controller.signal,
         })
 
