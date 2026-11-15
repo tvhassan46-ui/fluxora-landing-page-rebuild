@@ -43,7 +43,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const savedLocale = (await cookies()).get('site_language')?.value
+  // Ignore the old cookie once so visitors who previously selected Arabic start
+  // on the new English-first experience. The provider writes the versioned
+  // cookie after every language switch, so the toggle still persists normally.
+  const savedLocale = (await cookies()).get('site_language_v2')?.value
   const initialLocale: Locale = savedLocale === 'ar' ? 'ar' : 'en'
 
   return (

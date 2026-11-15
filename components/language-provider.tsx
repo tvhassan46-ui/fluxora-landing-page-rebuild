@@ -22,7 +22,8 @@ export function LanguageProvider({
 
   const setLocale = useCallback((nextLocale: Locale) => {
     setLocaleState(nextLocale)
-    document.cookie = `site_language=${nextLocale}; Path=/; Max-Age=31536000; SameSite=None; Secure`
+    document.cookie = `site_language_v2=${nextLocale}; Path=/; Max-Age=31536000; SameSite=None; Secure`
+    document.cookie = 'site_language=; Path=/; Max-Age=0; SameSite=Lax'
     document.documentElement.lang = nextLocale
     document.documentElement.dir = nextLocale === 'ar' ? 'rtl' : 'ltr'
   }, [])

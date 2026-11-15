@@ -144,8 +144,11 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   chapterKeyRef.current = chapterKey
   const translatedText = chapterKey ? translations[chapterKey] : undefined
   const isEnglish = locale === 'en'
-  const displayedParagraphs = isEnglish && translatedText
-    ? translatedText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean)
+  // Never render the Arabic source while English translation is loading or has
+  // failed. This keeps the English experience fully English instead of flashing
+  // Arabic chapters underneath the translation status message.
+  const displayedParagraphs = isEnglish
+    ? (translatedText?.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean) ?? [])
     : currentChapter
 
   useEffect(() => {
@@ -254,7 +257,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
       return
     }
 
-    if (!currentChapter.length) {
+    if (!currentChapter.length || (isEnglish && !translatedText)) {
       setAudioMessage(copy.loadBeforeAudio)
       return
     }
@@ -430,7 +433,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                     ))}
                   </select>
                 </div>
-                <button className="audio-button" type="button" onClick={() => void toggleAudio()} disabled={!currentChapter.length || isPreparingAudio} aria-busy={isPreparingAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? copy.pause : audioState === 'paused' ? copy.resume : copy.listen}>
+                <button className="audio-button" type="button" onClick={() => void toggleAudio()} disabled={!currentChapter.length || (isEnglish && !translatedText) || isPreparingAudio} aria-busy={isPreparingAudio} aria-pressed={audioState === 'playing'} aria-label={audioState === 'playing' ? copy.pause : audioState === 'paused' ? copy.resume : copy.listen}>
                   {audioState === 'playing' ? <Pause aria-hidden="true" /> : audioState === 'paused' ? <Play aria-hidden="true" /> : <Headphones aria-hidden="true" />}
                   {isPreparingAudio ? copy.preparingAudio : audioState === 'playing' ? copy.pauseLabel : audioState === 'paused' ? copy.resumeLabel : copy.listenLabel}
                 </button>
