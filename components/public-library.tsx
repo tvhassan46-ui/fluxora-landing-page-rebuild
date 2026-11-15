@@ -220,17 +220,21 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: currentChapter.join('\n\n') }),
       })
-      const result = await response.json().catch(() => null) as { translation?: unknown } | null
+      const result = await response.json().catch(() => null) as { translation?: unknown; error?: unknown } | null
 
       if (!response.ok || typeof result?.translation !== 'string') {
-        throw new Error(copy.translationFailed)
+        throw new Error(typeof result?.error === 'string' ? result.error : copy.translationFailed)
       }
 
+      // Only apply the result if the reader is still on the chapter that was requested.
+      // This also makes the successful response the single source of truth for switching
+      // the rendered text to English.
+      if (chapterKeyRef.current !== requestedChapterKey) return
       setTranslations((current) => ({ ...current, [requestedChapterKey]: result.translation as string }))
-      if (chapterKeyRef.current === requestedChapterKey) setIsEnglish(true)
-    } catch {
+      setIsEnglish(true)
+    } catch (error) {
       if (chapterKeyRef.current === requestedChapterKey) {
-        setTranslationMessage(copy.translateError)
+        setTranslationMessage(error instanceof Error ? error.message : copy.translateError)
       }
     } finally {
       setIsTranslating(false)

@@ -36,12 +36,14 @@ async function translateViaFallback(sourceText: string): Promise<string> {
     }
 
     const data = (await response.json()) as unknown[]
-    if (Array.isArray(data?.[0])) {
-      const paraText = (data[0] as [string][]).map((chunk) => chunk[0]).join('')
-      translatedParagraphs.push(paraText.trim())
-    } else {
-      translatedParagraphs.push(trimmed)
-    }
+    if (!Array.isArray(data?.[0])) throw new Error('Translation response had an unexpected format.')
+    const paraText = (data[0] as unknown[])
+      .filter((chunk): chunk is [string] => Array.isArray(chunk) && typeof chunk[0] === 'string')
+      .map((chunk) => chunk[0])
+      .join('')
+      .trim()
+    if (!paraText) throw new Error('Translation response was empty.')
+    translatedParagraphs.push(paraText)
   }
 
   return translatedParagraphs.join('\n\n')
