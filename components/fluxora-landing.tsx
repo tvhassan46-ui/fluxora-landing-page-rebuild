@@ -6,7 +6,7 @@ import { LanguageSwitch } from '@/components/language-switch'
 import { useLanguage } from '@/components/language-provider'
 import { getLandingCopy } from '@/lib/landing-copy'
 
-const navHrefs = ['#features', '#how-it-works', '#about', '#products', '#journal']
+const navHrefs = ['#features', '#how-it-works', '#about', '#products', '#journal', '#community']
 const partnerHrefs = ['/library', '/novels', '/stories', '/quotes']
 
 function BrandMark() {
@@ -65,6 +65,7 @@ export default function FluxoraLanding() {
     <section id="about" className="content-section about-section"><div className="section-heading"><span>{copy.aboutKicker}</span><h2>{copy.aboutTitle}<br/><em>{copy.aboutTitleEm}</em></h2></div><p className="about-copy">{copy.aboutCopy}</p></section>
     <section id="products" className="content-section section-alt"><div className="section-heading"><span>{copy.exploreKicker}</span><h2>{copy.exploreTitle}<br/><em>{copy.exploreTitleEm}</em></h2><p>{copy.exploreCopy}</p></div><div className="product-grid">{copy.products.map(([tag, title, description, action], index) => <a id={['bookstore', 'novels', 'stories', 'quotes'][index]} className="product-card" href={['/library', '/novels', '/stories', '/quotes'][index]} key={title}><span>{tag}</span><h3>{title}</h3><p>{description}</p><b>{action} <span aria-hidden="true">↗</span></b></a>)}</div></section>
     <section id="journal" className="content-section journal-section"><div className="section-heading"><span>{copy.journalKicker}</span><h2>{copy.journalTitle}<br/><em>{copy.journalTitleEm}</em></h2></div><a className="journal-link" href="/sign-up"><span><small>{copy.journalMeta}</small><strong>{copy.journalLink}</strong></span><b aria-hidden="true">↗</b></a></section>
+    <section id="community" className="content-section section-alt"><div className="section-heading"><span>{copy.communityKicker}</span><h2>{copy.communityTitle}<br/><em>{copy.communityTitleEm}</em></h2><p>{copy.communityDescription}</p></div><a className="journal-link" href="/community"><span><small>{copy.communityMeta}</small><strong>{copy.communityButton}</strong></span><b aria-hidden="true">↗</b></a></section>
     <footer className="site-footer"><a className="nav-brand" href="#main"><BrandMark/><span>LIVA</span></a><span>{copy.footer}</span><div><a href="/sign-in">{copy.signIn}</a><a href="/sign-up">{copy.getStarted}</a></div></footer>
   </>
 }

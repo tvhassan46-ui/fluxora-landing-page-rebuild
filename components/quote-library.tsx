@@ -27,10 +27,10 @@ export function QuoteLibrary() {
 
   async function listenQuote(lines: string[]) {
     try {
-      const response = await fetch('/api/quotes/messages', {
+      const response = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: lines.join('\n') }),
+        body: JSON.stringify({ text: lines.join('\n'), language: locale }),
       })
       if (!response.ok) return
       const blob = await response.blob()

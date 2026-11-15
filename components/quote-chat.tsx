@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { AudioLines, FileAudio2, ImagePlus, Mic, Paperclip, Send, Smile, X } from 'lucide-react'
+import { AudioLines, FileAudio2, ImagePlus, Mic, Paperclip, Send, Smile, Sticker, X } from 'lucide-react'
 import { Attachment, AttachmentAction, AttachmentActions, AttachmentContent, AttachmentDescription, AttachmentMedia, AttachmentTitle } from '@/components/chat-elements/attachment'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/chat-elements/input-group'
 import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from '@/components/chat-ui/message-scroller'
@@ -36,6 +36,7 @@ const allowedMediaTypes = new Set([
   'audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a',
 ])
 const emojiOptions = ['📚', '📖', '✨', '❤️', '🌿', '😂', '👏', '🤍', '🙌', '🪶', '🌙', '💬']
+const stickerOptions = ['🦉', '📚', '📖', '✨', '👏', '💛', '🌙', '🌿', '🎉', '💬', '😄', '🤗']
 
 async function fetchMessages(url: string): Promise<MessagesResponse> {
   const response = await fetch(url, { cache: 'no-store' })
@@ -53,10 +54,24 @@ function formatFileType(type: string, locale: 'en' | 'ar') {
   return locale === 'ar' ? 'صوت' : 'Audio'
 }
 
-export function QuoteChat() {
+export function QuoteChat({ mode = 'quotes' }: { mode?: 'quotes' | 'community' }) {
   const { locale } = useLanguage()
-  const copy = getQuoteChatCopy(locale)
-  const { data, error: loadError, isLoading, mutate } = useSWR<MessagesResponse>('/api/quotes/messages', fetchMessages, {
+  const sourceCopy = getQuoteChatCopy(locale)
+  const copy = mode === 'community'
+    ? {
+        ...sourceCopy,
+        title: sourceCopy.communityTitle,
+        description: sourceCopy.communityDescription,
+        room: sourceCopy.communityRoom,
+        empty: sourceCopy.communityEmpty,
+        signInTitle: sourceCopy.communitySignInTitle,
+        signInDescription: sourceCopy.communitySignInDescription,
+        placeholder: sourceCopy.communityPlaceholder,
+      }
+    : sourceCopy
+  const emojiPanelId = `${mode}-emoji-options`
+  const stickerPanelId = `${mode}-sticker-options`
+  const { data, error: loadError, isLoading, mutate } = useSWR<MessagesResponse>(`/api/quotes/messages?room=${mode}`, fetchMessages, {
     refreshInterval: 10000,
     revalidateOnFocus: true,
     errorRetryCount: 2,
@@ -66,6 +81,7 @@ export function QuoteChat() {
   const [error, setError] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [stickerOpen, setStickerOpen] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -179,6 +195,7 @@ export function QuoteChat() {
     setIsSending(true)
     const formData = new FormData()
     formData.set('body', body)
+    formData.set('room', mode)
     if (attachment) formData.set('file', attachment)
 
     try {
@@ -191,6 +208,7 @@ export function QuoteChat() {
       setDraft('')
       setAttachment(null)
       setEmojiOpen(false)
+      setStickerOpen(false)
       await mutate()
     } catch {
       setError(copy.sendError)
@@ -211,15 +229,20 @@ export function QuoteChat() {
     setEmojiOpen(false)
   }
 
+  function addSticker(sticker: string) {
+    setDraft((current) => current ? `${current}${current.endsWith(' ') ? '' : ' '}${sticker}` : sticker)
+    setStickerOpen(false)
+  }
+
   const isImageAttachment = attachment?.type.startsWith('image/') ?? false
   const isAuthenticated = data?.authenticated === true
 
   return (
-    <section className="quote-chat" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale} aria-labelledby="quote-chat-title">
+    <section className={`quote-chat${mode === 'community' ? ' community-chat' : ''}`} dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale} aria-labelledby={`${mode}-chat-title`}>
       <header className="quote-chat-heading">
         <div>
           <span className="library-eyebrow">{copy.room}</span>
-          <h2 id="quote-chat-title">{copy.title}</h2>
+          <h2 id={`${mode}-chat-title`}>{copy.title}</h2>
           <p>{copy.description}</p>
         </div>
       </header>
@@ -240,7 +263,7 @@ export function QuoteChat() {
                         <Message align={message.isOwn ? 'end' : 'start'} className="quote-chat-message">
                           <MessageContent className="quote-chat-message-content">
                             <MessageHeader className="quote-chat-message-header">{message.isOwn ? copy.you : message.userName}</MessageHeader>
-                            {message.body && <Bubble variant={message.isOwn ? 'tinted' : 'secondary'} align={message.isOwn ? 'end' : 'start'} className="quote-chat-bubble"><BubbleContent><p>{message.body}</p></BubbleContent></Bubble>}
+                            {message.body && <Bubble variant={message.isOwn ? 'tinted' : 'secondary'} align={message.isOwn ? 'end' : 'start'} className="quote-chat-bubble"><BubbleContent><p className={stickerOptions.includes(message.body) ? 'quote-chat-sticker' : undefined} style={stickerOptions.includes(message.body) ? { fontSize: '56px', lineHeight: 1.15 } : undefined}>{message.body}</p></BubbleContent></Bubble>}
                             {message.mediaUrl && message.mediaType?.startsWith('image/') && (
                               <Attachment className="quote-chat-message-attachment" size="sm" orientation="vertical">
                                 <AttachmentMedia variant="image"><img src={message.mediaUrl} alt={copy.sharedImage} loading="lazy" /></AttachmentMedia>
@@ -291,8 +314,11 @@ export function QuoteChat() {
               />
               <InputGroupAddon align="block-end" className="quote-chat-composer-actions">
                 <div className="quote-chat-toolbar">
-                  <InputGroupButton type="button" aria-label={copy.emoji} aria-expanded={emojiOpen} aria-controls="quote-emoji-options" onClick={() => setEmojiOpen((open) => !open)} disabled={isSending}>
+                  <InputGroupButton type="button" aria-label={copy.emoji} aria-expanded={emojiOpen} aria-controls={emojiPanelId} onClick={() => { setEmojiOpen((open) => !open); setStickerOpen(false) }} disabled={isSending}>
                     <Smile />
+                  </InputGroupButton>
+                  <InputGroupButton type="button" aria-label={copy.stickers} aria-expanded={stickerOpen} aria-controls={stickerPanelId} onClick={() => { setStickerOpen((open) => !open); setEmojiOpen(false) }} disabled={isSending}>
+                    <Sticker />
                   </InputGroupButton>
                   <InputGroupButton type="button" aria-label={copy.attach} onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
                     <Paperclip />
@@ -309,7 +335,8 @@ export function QuoteChat() {
             </InputGroup>
             <input ref={fileInputRef} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/mp4,audio/mpeg,audio/wav,audio/ogg,audio/aac,audio/x-m4a" aria-label={copy.chooseFile} onChange={handleFileChange} />
             {isRecording && <p className="quote-chat-recording" role="status"><span aria-hidden="true" />{copy.recording}</p>}
-            {emojiOpen && <div className="quote-chat-emoji-panel" id="quote-emoji-options" role="group" aria-label={copy.emojiOptions}>{emojiOptions.map((emoji) => <button type="button" key={emoji} aria-label={copy.insertEmoji.replace('{emoji}', emoji)} onClick={() => addEmoji(emoji)}>{emoji}</button>)}</div>}
+            {emojiOpen && <div className="quote-chat-emoji-panel" id={emojiPanelId} role="group" aria-label={copy.emojiOptions}>{emojiOptions.map((emoji) => <button type="button" key={emoji} aria-label={copy.insertEmoji.replace('{emoji}', emoji)} onClick={() => addEmoji(emoji)}>{emoji}</button>)}</div>}
+            {stickerOpen && <div className="quote-chat-emoji-panel quote-chat-sticker-panel" id={stickerPanelId} role="group" aria-label={copy.stickerOptions}>{stickerOptions.map((sticker) => <button type="button" key={sticker} aria-label={copy.insertSticker.replace('{emoji}', sticker)} onClick={() => addSticker(sticker)}>{sticker}</button>)}</div>}
             {error && <p className="quote-chat-error" role="alert">{error}</p>}
           </form>
         </div>
