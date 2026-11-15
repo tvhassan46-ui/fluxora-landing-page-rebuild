@@ -39,10 +39,28 @@ const emojiOptions = ['📚', '📖', '✨', '❤️', '🌿', '😂', '👏', '
 const stickerOptions = ['🦉', '📚', '📖', '✨', '👏', '💛', '🌙', '🌿', '🎉', '💬', '😄', '🤗']
 
 async function fetchMessages(url: string): Promise<MessagesResponse> {
-  const response = await fetch(url, { cache: 'no-store' })
-  if (response.status === 401) return { authenticated: false, messages: [] }
-  if (!response.ok) throw new Error('Unable to load messages')
-  return response.json() as Promise<MessagesResponse>
+  try {
+    const response = await fetch(url, { 
+      cache: 'no-store',
+      credentials: 'include' // Explicitly include credentials for mobile/CORS safety
+    })
+    
+    if (response.status === 401) {
+      return { authenticated: false, messages: [] }
+    }
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'No error body')
+      console.error(`Chat fetch failed: ${response.status} ${response.statusText}`, errorText)
+      throw new Error(`Unable to load messages: ${response.status}`)
+    }
+    
+    const data = await response.json() as MessagesResponse
+    return data
+  } catch (err) {
+    console.error('Chat fetch network/parse error:', err)
+    throw err
+  }
 }
 
 function formatMegabytes(size: number) {

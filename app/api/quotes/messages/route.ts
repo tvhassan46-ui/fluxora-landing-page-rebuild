@@ -38,18 +38,33 @@ function getRoomKey(value: string | null): RoomKey | null {
 }
 
 async function getSignedInUser() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  return session?.user ?? null
+  try {
+    const session = await auth.api.getSession({ headers: await headers() })
+    return session?.user ?? null
+  } catch (error) {
+    console.error('Session retrieval failed:', error)
+    return null
+  }
 }
 
 export async function GET(request: Request) {
+  const requestId = randomUUID()
   try {
+    console.log(`[${requestId}] GET /api/quotes/messages - room: ${new URL(request.url).searchParams.get('room')}`)
+    
     const user = await getSignedInUser()
-    if (!user) return NextResponse.json({ authenticated: false, messages: [] }, { status: 401 })
+    if (!user) {
+      console.warn(`[${requestId}] No user found in session`)
+      return NextResponse.json({ authenticated: false, messages: [] }, { status: 401 })
+    }
 
     const roomKey = getRoomKey(new URL(request.url).searchParams.get('room') ?? 'quotes')
-    if (!roomKey) return NextResponse.json({ error: 'Choose a valid chat room.' }, { status: 400 })
+    if (!roomKey) {
+      console.error(`[${requestId}] Invalid room key`)
+      return NextResponse.json({ error: 'Choose a valid chat room.' }, { status: 400 })
+    }
 
+    console.log(`[${requestId}] Fetching messages for room: ${rooms[roomKey]}`)
     const rows = await db
       .select()
       .from(quoteMessages)
@@ -57,6 +72,7 @@ export async function GET(request: Request) {
       .orderBy(desc(quoteMessages.createdAt))
       .limit(100)
 
+    console.log(`[${requestId}] Found ${rows.length} messages`)
     const messages = rows.reverse().map((message) => ({
       id: message.id,
       userName: message.userName,
@@ -71,8 +87,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ authenticated: true, messages })
   } catch (error) {
-    console.error('Failed to load chat messages:', error)
-    return NextResponse.json({ error: 'Unable to load messages.' }, { status: 500 })
+    console.error(`[${requestId}] Failed to load chat messages:`, error)
+    return NextResponse.json({ 
+      error: 'Unable to load messages.',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined 
+    }, { status: 500 })
   }
 }
 
