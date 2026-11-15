@@ -13,6 +13,7 @@ import { bookTranslations } from '@/lib/reader-translations'
 
 type PublicLibraryProps = { collection: 'books' | 'novels' | 'stories' }
 type Selection = { bookId: string; episodeId: string }
+type VoiceOption = { id: string; label: string; accent?: string }
 type ReaderResponse = {
   bookTitle: string
   episodeTitle: string
@@ -107,6 +108,20 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
   const [isTranslating, setIsTranslating] = useState(false)
   const [translationMessage, setTranslationMessage] = useState('')
   const [voiceId, setVoiceId] = useState<string>('Ix8C14HEHgIQkJswik2o')
+  const voiceOptions: Record<'en' | 'ar', VoiceOption[]> = {
+    en: [
+      { id: 'Ix8C14HEHgIQkJswik2o', label: 'Arabic narrator', accent: 'Modern Arabic' },
+      { id: '21m00Tcm4TlvDq8ikWAM', label: 'Rachel', accent: 'Warm narrator' },
+      { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam', accent: 'Clear storyteller' },
+      { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Bella', accent: 'Bright voice' },
+    ],
+    ar: [
+      { id: 'Ix8C14HEHgIQkJswik2o', label: 'صوت عربي خفيف', accent: 'القراءة العربية' },
+      { id: '21m00Tcm4TlvDq8ikWAM', label: 'راشيل', accent: 'صوت هادئ ومشرق' },
+      { id: 'pNInz6obpgDQGcFmaJgB', label: 'آدم', accent: 'صوت واضح ومقروء' },
+      { id: 'EXAVITQu4vr4xnSDxMaL', label: 'بيلا', accent: 'صوت دافئ' },
+    ],
+  }
   const readerRef = useRef<HTMLElement>(null)
   const chapterKeyRef = useRef<string | null>(null)
   const activeBook = books.find((book) => book.id === selection?.bookId)
@@ -445,10 +460,13 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                       setAudioMessage('')
                     }}
                     aria-label={locale === 'ar' ? 'اختيار صوت القراءة' : 'Select reading voice'}
-                    title={locale === 'ar' ? 'تبديل صوت ElevenLabs' : 'Switch ElevenLabs voice'}
+                    title={locale === 'ar' ? 'تبديل صوت القارئ' : 'Switch reading voice'}
                   >
-                    <option value="Ix8C14HEHgIQkJswik2o">{locale === 'ar' ? 'الصوت المخصص (Ix8C14)' : 'Custom Voice (Ix8C14)'}</option>
-                    <option value="21m00Tcm4TlvDq8ikWAM">{locale === 'ar' ? 'الصوت الافتراضي (راشيل)' : 'Default Voice (Rachel)'}</option>
+                    {voiceOptions[locale].map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}{option.accent ? ` — ${option.accent}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <button className="translation-button" type="button" onClick={() => void toggleEnglishTranslation()} disabled={!currentChapter.length || isTranslating} aria-busy={isTranslating} aria-pressed={isEnglish} aria-label={isEnglish ? copy.showArabic : copy.translate}>

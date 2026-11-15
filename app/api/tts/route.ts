@@ -21,6 +21,18 @@ const audioCache = new Map<string, CachedAudio>()
 export const DEFAULT_ARABIC_VOICE_ID = 'Ix8C14HEHgIQkJswik2o'
 export const DEFAULT_ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'
 
+const VOICE_PROFILE_OPTIONS = {
+  arabic: [
+    { id: 'Ix8C14HEHgIQkJswik2o', label: 'Arabic narrator' },
+    { id: '7L26n1R4Wk5rT8QJk0TQ', label: 'Warm Arabic storyteller' },
+  ],
+  english: [
+    { id: '21m00Tcm4TlvDq8ikWAM', label: 'Rachel' },
+    { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam' },
+    { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Bella' },
+  ],
+} as const
+
 function pruneAudioCache() {
   const now = Date.now()
   for (const [key, entry] of audioCache) {
@@ -73,7 +85,7 @@ async function synthesizeElevenLabsWithVoice(
   apiKey: string,
 ): Promise<Buffer> {
   const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2'
-  const chunks = splitTextIntoSentences(text, 1000)
+  const chunks = splitTextIntoSentences(text, 900)
   const audioBuffers: Buffer[] = []
 
   for (const chunk of chunks) {
@@ -89,8 +101,10 @@ async function synthesizeElevenLabsWithVoice(
         text: chunk,
         model_id: modelId,
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+          stability: 0.42,
+          similarity_boost: 0.82,
+          style: 0.55,
+          use_speaker_boost: true,
         },
       }),
       cache: 'no-store',

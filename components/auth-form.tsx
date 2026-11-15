@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Eye, EyeOff, MoveRight } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -9,6 +9,7 @@ import { LanguageSwitch } from '@/components/language-switch'
 import { useLanguage } from '@/components/language-provider'
 import { getAuthCopy } from '@/lib/auth-copy'
 import { authClient } from '@/lib/auth-client'
+import { AuthOwl } from '@/components/auth-owl'
 
 type AuthFormProps = { mode: 'sign-in' | 'sign-up' }
 
@@ -17,10 +18,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   const { locale } = useLanguage()
   const copy = getAuthCopy(locale)
   const isSignUp = mode === 'sign-up'
+  const emailRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [passwordFocused, setPasswordFocused] = useState(false)
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
 
@@ -53,42 +56,45 @@ export function AuthForm({ mode }: AuthFormProps) {
       <div className="auth-orbit auth-orbit-one" aria-hidden="true" />
       <div className="auth-orbit auth-orbit-two" aria-hidden="true" />
       <div className="auth-topbar"><Link className="auth-brand" href="/" aria-label={locale === 'ar' ? 'الصفحة الرئيسية لموقع LIVA' : 'LIVA home'}><Image src="/liva-mark.svg" alt="" width={28} height={28} />LIVA</Link><LanguageSwitch /></div>
-      <section className="auth-card" aria-labelledby="auth-title">
-        <Link className="auth-back" href="/">{locale === 'ar' ? '→' : '←'} {copy.back}</Link>
-        <p className="auth-eyebrow">{copy.eyebrow}</p>
-        <h1 id="auth-title">{isSignUp ? copy.signUpTitle : copy.signInTitle}</h1>
-        <p className="auth-intro">{isSignUp ? copy.signUpDescription : copy.signInDescription}</p>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {isSignUp && (
+      <div className="auth-stage">
+        <AuthOwl emailRef={emailRef} passwordFocused={passwordFocused} showPassword={showPassword} />
+        <section className="auth-card" aria-labelledby="auth-title">
+          <Link className="auth-back" href="/">{locale === 'ar' ? '→' : '←'} {copy.back}</Link>
+          <p className="auth-eyebrow">{copy.eyebrow}</p>
+          <h1 id="auth-title">{isSignUp ? copy.signUpTitle : copy.signInTitle}</h1>
+          <p className="auth-intro">{isSignUp ? copy.signUpDescription : copy.signInDescription}</p>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {isSignUp && (
+              <div className="auth-field">
+                <label className="auth-sr" htmlFor="name">{copy.name}</label>
+                <input id="name" name="name" type="text" autoComplete="name" placeholder={copy.name} required minLength={2} maxLength={80} value={name} onChange={(event) => setName(event.target.value)} />
+              </div>
+            )}
             <div className="auth-field">
-              <label htmlFor="name">{copy.name}</label>
-              <input id="name" name="name" type="text" autoComplete="name" required minLength={2} maxLength={80} value={name} onChange={(event) => setName(event.target.value)} />
+              <label className="auth-sr" htmlFor="email">{copy.email}</label>
+              <input ref={emailRef} id="email" name="email" type="email" autoComplete="email" placeholder={copy.email} required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
-          )}
-          <div className="auth-field">
-            <label htmlFor="email">{copy.email}</label>
-            <input id="email" name="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} />
-          </div>
-          <div className="auth-field">
-            <label htmlFor="password">{copy.password}</label>
-            <div className="auth-password-wrap">
-              <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete={isSignUp ? 'new-password' : 'current-password'} required minLength={isSignUp ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} />
-              <button className="auth-password-toggle" type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? copy.hidePassword : copy.showPassword} aria-pressed={showPassword}>
-                {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-              </button>
+            <div className="auth-field">
+              <label className="auth-sr" htmlFor="password">{copy.password}</label>
+              <div className="auth-password-wrap">
+                <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete={isSignUp ? 'new-password' : 'current-password'} placeholder={copy.password} required minLength={isSignUp ? 8 : 1} maxLength={128} value={password} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} onChange={(event) => setPassword(event.target.value)} />
+                <button className="auth-password-toggle" type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? copy.hidePassword : copy.showPassword} aria-pressed={showPassword}>
+                  {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                </button>
+              </div>
             </div>
-          </div>
-          {error && <p className="auth-error" role="alert">{error}</p>}
-          <button className="auth-submit" type="submit" disabled={isPending}>
-            <span>{isPending ? copy.wait : isSignUp ? copy.createAccount : copy.signIn}</span>
-            {!isPending && <MoveRight aria-hidden="true" />}
-          </button>
-        </form>
-        <p className="auth-switch">
-          {isSignUp ? copy.existingAccount : copy.newAccount}{' '}
-          <Link href={isSignUp ? '/sign-in' : '/sign-up'}>{isSignUp ? copy.signIn : copy.createAccount}</Link>
-        </p>
-      </section>
+            {error && <p className="auth-error" role="alert">{error}</p>}
+            <button className="auth-submit" type="submit" disabled={isPending}>
+              <span>{isPending ? copy.wait : isSignUp ? copy.createAccount : copy.signIn}</span>
+              {!isPending && <MoveRight aria-hidden="true" />}
+            </button>
+          </form>
+          <p className="auth-switch">
+            {isSignUp ? copy.existingAccount : copy.newAccount}{' '}
+            <Link href={isSignUp ? '/sign-in' : '/sign-up'}>{isSignUp ? copy.signIn : copy.createAccount}</Link>
+          </p>
+        </section>
+      </div>
       <p className="auth-footer">{copy.dashboardFooter}</p>
     </main>
   )
