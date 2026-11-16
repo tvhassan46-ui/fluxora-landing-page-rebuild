@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Check, Copy, ExternalLink, Quote } from 'lucide-react'
+import { ArrowLeft, Check, Copy, ExternalLink, Quote, Share2 } from 'lucide-react'
 import { publicQuotes } from '@/lib/reader-catalog'
 import { LanguageSwitch } from '@/components/language-switch'
 import { useLanguage } from '@/components/language-provider'
@@ -31,6 +31,20 @@ export function QuoteLibrary() {
       onError: () => { /* Browser/OS speech availability varies by device. */ },
     })
     if (!utterance) return
+  }
+
+  async function shareQuote(lines: string[]) {
+    const url = `${window.location.origin}/quotes`
+    const text = lines.join('\n')
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'LIVA · Literary quote', text, url })
+      } else {
+        await navigator.clipboard.writeText(`${text}\n\n${url}`)
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
+    }
   }
 
   return (
@@ -62,6 +76,9 @@ export function QuoteLibrary() {
               </button>
               <button type="button" className="copy-quote-button" onClick={() => void listenQuote(lines)}>
                 {locale === 'ar' ? 'استمع' : 'Listen'}
+              </button>
+              <button type="button" className="copy-quote-button" onClick={() => void shareQuote(lines)}>
+                <Share2 aria-hidden="true" /> {locale === 'ar' ? 'شارك' : 'Share'}
               </button>
                 {locale === 'ar' ? 'ترجم' : 'Translate'}
               </button>
