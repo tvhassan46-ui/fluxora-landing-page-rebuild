@@ -1,6 +1,6 @@
 # LIVA
 
-LIVA is a bilingual Arabic literature library built with Next.js. It includes public-domain reading, browser-native read-aloud, reader discussions, reading clubs, a personal saved shelf, and local reading rewards.
+LIVA is a bilingual Arabic literature library built with Next.js. It includes public-domain reading, browser-native read-aloud, reader discussions, reading clubs, a personal saved shelf, local reading rewards, and classic Arabic books across literary journeys, novels, maqamat, and story collections.
 
 ## Local development
 
@@ -16,10 +16,11 @@ Authentication and persistent discussions use PostgreSQL and Better Auth. Set `D
 
 ## No hosted AI, TTS, translation, or media tokens
 
-- Read-aloud uses the browser's built-in Speech Synthesis API and the voices already installed on the visitor's device.
+- Read-aloud uses the browser's built-in Speech Synthesis API, splits long passages into smaller utterances, and chooses a voice already installed on the visitor's device. An Arabic voice must be available on that device for Arabic narration.
 - Automatic chapter translation is not bundled. A reliable unlimited hosted translator is not available for free; English visitors can use their browser's page-translation feature. Curated English book and quote copy remains available.
 - Chat images and audio notes are stored in the existing PostgreSQL `quote_messages.media_path` field as data URLs, not Vercel Blob. Attachments are limited to 2.5 MB. Existing attachments stored in Vercel Blob before this change are not migrated automatically.
 - The reading clubs use the existing `quote_messages` table with separate room IDs.
+- The catalogue includes additional Wikisource texts: *The Dove’s Neck-Ring*, *The Travels of Ibn Battuta*, the Maqamat of al-Hariri and Badi al-Zaman al-Hamadhani, *The Book of Misers*, and *The Voyages of Sinbad the Sailor*.
 - Points, badges, and saved books are stored locally in the current browser. They do not sync across devices.
 
 No AI Gateway, LiveKit, Edge TTS, Vercel Blob, or Vercel Analytics account/token is required by these features.
