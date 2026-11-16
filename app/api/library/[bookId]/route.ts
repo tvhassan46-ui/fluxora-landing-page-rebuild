@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { publicBooks } from '@/lib/reader-catalog'
-import { translateArabicToEnglish } from '@/lib/translation'
 
 type RouteContext = { params: Promise<{ bookId: string }> }
 
@@ -8,8 +7,6 @@ type WikisourceParseResponse = {
   parse?: { title?: string; text?: { '*': string } }
   error?: { info?: string }
 }
-
-export const maxDuration = 60
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { bookId } = await params
