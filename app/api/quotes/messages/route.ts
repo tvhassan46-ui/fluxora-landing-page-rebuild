@@ -120,7 +120,7 @@ export async function POST(request: Request) {
   }
   if (!body && !file) return NextResponse.json({ error: 'Write a message or attach a file.' }, { status: 400 })
   if (file && file.size > maxAttachmentBytes) {
-    return NextResponse.json({ error: 'Attachments must be 4 MB or smaller.' }, { status: 413 })
+    return NextResponse.json({ error: 'Attachments must be 2.5 MB or smaller.' }, { status: 413 })
   }
 
   const contentType = file?.type.split(';')[0].toLowerCase()
