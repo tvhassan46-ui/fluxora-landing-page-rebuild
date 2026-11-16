@@ -72,21 +72,40 @@ function formatFileType(type: string, locale: 'en' | 'ar') {
   return locale === 'ar' ? 'صوت' : 'Audio'
 }
 
-export function QuoteChat({ mode = 'quotes' }: { mode?: 'quotes' | 'community' }) {
+type ChatMode = 'quotes' | 'community' | 'club-arabic-classics' | 'club-poetry-circle' | 'club-short-stories'
+
+const clubCopy = {
+  'club-arabic-classics': {
+    en: { title: 'Arabic Classics Club', description: 'Read the great works of Arabic literature together and exchange notes about each chapter.', room: 'Classics discussion', empty: 'Start with a classic you love or recommend a work to the club.', signInTitle: 'Join the classics club', signInDescription: 'Sign in to take part in the shared reading conversation.', placeholder: 'Share a thought about an Arabic classic…' },
+    ar: { title: 'نادي الأدب العربي', description: 'نقرأ روائع الأدب العربي معًا ونتبادل الملاحظات حول كل فصل.', room: 'نقاش الأدب الكلاسيكي', empty: 'ابدأ بعمل أدبي تحبه أو رشّح كتابًا للنادي.', signInTitle: 'انضم إلى نادي الأدب', signInDescription: 'سجّل الدخول للمشاركة في القراءة الجماعية.', placeholder: 'شاركنا رأيك في عمل أدبي…' },
+  },
+  'club-poetry-circle': {
+    en: { title: 'Poetry Circle', description: 'Explore poems, favorite verses, literary meanings, and the voices behind them.', room: 'Poetry conversation', empty: 'Share a verse that stayed with you.', signInTitle: 'Join the poetry circle', signInDescription: 'Sign in to share verses and discuss poetry with other readers.', placeholder: 'Share a poem or a favorite verse…' },
+    ar: { title: 'حلقة الشعر', description: 'اكتشف القصائد والأبيات المفضلة ومعانيها وأصوات الشعراء.', room: 'مجلس الشعر', empty: 'شارك بيتًا شعريًا بقي في ذاكرتك.', signInTitle: 'انضم إلى حلقة الشعر', signInDescription: 'سجّل الدخول لمشاركة الأبيات ومناقشة الشعر مع القراء.', placeholder: 'شارك قصيدة أو بيتًا تحبه…' },
+  },
+  'club-short-stories': {
+    en: { title: 'Short Story Club', description: 'Read short stories, discuss the characters, and share your interpretations.', room: 'Story discussion', empty: 'Suggest a short story to start the conversation.', signInTitle: 'Join the story club', signInDescription: 'Sign in to read and discuss stories with the group.', placeholder: 'What did you think of the story…' },
+    ar: { title: 'نادي القصة القصيرة', description: 'نقرأ القصص القصيرة ونناقش شخصياتها ونشارك تأويلاتنا.', room: 'نقاش القصص', empty: 'اقترح قصة قصيرة لبدء الحوار.', signInTitle: 'انضم إلى نادي القصة', signInDescription: 'سجّل الدخول لقراءة القصص ومناقشتها مع المجموعة.', placeholder: 'ما رأيك في القصة…' },
+  },
+} as const
+
+export function QuoteChat({ mode = 'quotes' }: { mode?: ChatMode }) {
   const { locale } = useLanguage()
   const sourceCopy = getQuoteChatCopy(locale)
-  const copy = mode === 'community'
-    ? {
-        ...sourceCopy,
-        title: sourceCopy.communityTitle,
-        description: sourceCopy.communityDescription,
-        room: sourceCopy.communityRoom,
-        empty: sourceCopy.communityEmpty,
-        signInTitle: sourceCopy.communitySignInTitle,
-        signInDescription: sourceCopy.communitySignInDescription,
-        placeholder: sourceCopy.communityPlaceholder,
-      }
-    : sourceCopy
+  const copy = mode.startsWith('club-')
+    ? { ...sourceCopy, ...clubCopy[mode as keyof typeof clubCopy][locale] }
+    : mode === 'community'
+      ? {
+          ...sourceCopy,
+          title: sourceCopy.communityTitle,
+          description: sourceCopy.communityDescription,
+          room: sourceCopy.communityRoom,
+          empty: sourceCopy.communityEmpty,
+          signInTitle: sourceCopy.communitySignInTitle,
+          signInDescription: sourceCopy.communitySignInDescription,
+          placeholder: sourceCopy.communityPlaceholder,
+        }
+      : sourceCopy
   const emojiPanelId = `${mode}-emoji-options`
   const stickerPanelId = `${mode}-sticker-options`
   const { data, error: loadError, isLoading, mutate } = useSWR<MessagesResponse>(`/api/quotes/messages?room=${mode}`, fetchMessages, {
