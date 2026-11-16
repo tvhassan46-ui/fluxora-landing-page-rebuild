@@ -7,6 +7,7 @@ import { Bookmark, Check, Share2, Trash2 } from 'lucide-react'
 import { publicBooks } from '@/lib/reader-catalog'
 import { useLanguage } from '@/components/language-provider'
 import { LanguageSwitch } from '@/components/language-switch'
+import { bookTranslations } from '@/lib/reader-translations'
 
 const STORAGE_KEY = 'liva-saved-books-v1'
 
@@ -103,7 +104,7 @@ export function ReadingShelf() {
       </section>
       {savedBooks.length ? <section className="shelf-grid">{savedBooks.map((book) => <article className="shelf-card" key={book.id}>
         <Link href="/library" className="shelf-cover"><Image src={book.coverImage} alt={book.title} fill sizes="140px" /></Link>
-        <div><strong>{isArabic ? book.title : book.id === 'hayy-ibn-yaqzan' ? 'Hayy ibn Yaqzan' : book.id === 'alf-layla' ? 'One Thousand and One Nights' : book.id === 'kalila-wa-dimna' ? 'Kalila and Dimna' : 'The Epistle of Forgiveness'}</strong><small>{isArabic ? book.author : book.id === 'hayy-ibn-yaqzan' ? 'Ibn Tufail' : book.id === 'alf-layla' ? 'Traditional stories' : book.id === 'kalila-wa-dimna' ? 'Ibn al-Muqaffa' : 'Al-Ma’arri'}</small><div><Link href="/library">{isArabic ? 'ابدأ القراءة' : 'Start reading'}</Link><button type="button" onClick={() => remove(book.id)} aria-label={isArabic ? 'إزالة الكتاب' : 'Remove book'}><Trash2 aria-hidden="true" /></button></div></div>
+        <div><strong>{isArabic ? book.title : bookTranslations[book.id]?.title ?? book.title}</strong><small>{isArabic ? book.author : bookTranslations[book.id]?.author ?? book.author}</small><div><Link href="/library">{isArabic ? 'ابدأ القراءة' : 'Start reading'}</Link><button type="button" onClick={() => remove(book.id)} aria-label={isArabic ? 'إزالة الكتاب' : 'Remove book'}><Trash2 aria-hidden="true" /></button></div></div>
       </article>)}</section> : <section className="shelf-empty"><Bookmark aria-hidden="true" /><h2>{isArabic ? 'رفّك فارغ حاليًا' : 'Your shelf is empty'}</h2><p>{isArabic ? 'احفظ الكتب من صفحات المكتبة لتجدها هنا.' : 'Save books from the library and they will appear here.'}</p><Link href="/library">{isArabic ? 'تصفح المكتبة' : 'Browse the library'}</Link></section>}
       <footer className="library-footer"><Link href="/">LIVA</Link><span>{isArabic ? 'الكتب التي تحبها، في مكان واحد.' : 'The books you love, in one place.'}</span><Link href="/clubs">{isArabic ? 'نوادي القراءة' : 'Reading clubs'}</Link></footer>
     </main>
