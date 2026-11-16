@@ -51,7 +51,7 @@ export function QuoteLibrary() {
     <main className="library-page quote-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="library-topbar">
         <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى رواق' : 'Back to LIVA'}><Image src="/liva-mark.svg" alt="" width={32} height={32} className="library-logo-mark" /><span>LIVA</span></Link>
-        <nav className="library-nav" aria-label={copy.nav.aria}><Link href="/library">{copy.nav.books}</Link><Link href="/novels">{copy.nav.novels}</Link><Link href="/stories">{copy.nav.stories}</Link><Link href="/quotes" aria-current="page">{copy.nav.quotes}</Link></nav>
+        <nav className="library-nav" aria-label={copy.nav.aria}><Link href="/library">{copy.nav.books}</Link><Link href="/novels">{copy.nav.novels}</Link><Link href="/stories">{copy.nav.stories}</Link><Link href="/quotes" aria-current="page">{copy.nav.quotes}</Link><Link href="/clubs">{locale === "ar" ? "نوادي القراءة" : "Reading clubs"}</Link><Link href="/progress">{locale === "ar" ? "إنجازاتي" : "Progress"}</Link><Link href="/shelf">{locale === "ar" ? "رفّي" : "My shelf"}</Link></nav>
         <div className="library-header-actions"><LanguageSwitch /><Link className="library-home-link" href="/">{copy.home} <ArrowLeft aria-hidden="true" /></Link></div>
       </header>
       <section className="quotes-hero" aria-labelledby="quotes-title">
