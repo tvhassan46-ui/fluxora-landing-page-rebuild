@@ -77,6 +77,67 @@ export const bookTranslations: Record<string, {
       'first-part-28': 'al-Ajjaj',
     },
   },
+  'tawq-al-hamama': {
+    title: 'The Dove’s Neck-Ring',
+    author: 'Ibn Hazm al-Andalusi',
+    period: '5th century AH',
+    genreLabel: 'Literary treatise',
+    description: 'An Andalusian work on love, its signs and experiences, blending reflection, personal narrative, and poetry.',
+    episodes: {
+      'letters-structure': 'Structure of the Treatise',
+      union: 'Union',
+      contentment: 'Contentment',
+    },
+  },
+  'tuhfat-al-nuzzar': {
+    title: 'The Travels of Ibn Battuta',
+    author: 'Ibn Battuta',
+    period: '8th century AH',
+    genreLabel: 'Travel literature',
+    description: 'Ibn Battuta’s account of his journeys from Tangier across cities and countries, recording people, places, and customs.',
+    episodes: { 'first-journey': 'Volume One' },
+  },
+  'maqamat-hariri': {
+    title: 'The Maqamat of al-Hariri',
+    author: 'Al-Qasim ibn Ali al-Hariri',
+    period: '6th century AH',
+    genreLabel: 'Classical literary tales',
+    description: 'The adventures of al-Harith ibn Hammam and Abu Zayd al-Sarouji, told through wit, travel, and eloquent prose.',
+    episodes: {
+      'hariri-haramiyya': 'The Haramiyya Maqama',
+      'hariri-omaniyya': 'The Omani Maqama',
+      'hariri-maghribiyya': 'The Maghribi Maqama',
+      'hariri-makkiyya': 'The Makkiyya Maqama',
+    },
+  },
+  'maqamat-badi': {
+    title: 'The Maqamat of Badi al-Zaman al-Hamadhani',
+    author: 'Badi al-Zaman al-Hamadhani',
+    period: '4th century AH',
+    genreLabel: 'Classical literary tales',
+    description: 'The witty encounters of Abu al-Fath al-Iskandari as narrated by Isa ibn Hisham.',
+    episodes: {
+      'badi-saymariyya': 'The Saymariyya Maqama',
+      'badi-shiraziyya': 'The Shiraziyya Maqama',
+      'badi-nuhaydiyya': 'The Nuhaydiyya Maqama',
+    },
+  },
+  'al-bukhala': {
+    title: 'The Book of Misers',
+    author: 'Al-Jahiz',
+    period: '3rd century AH',
+    genreLabel: 'Anecdotes and stories',
+    description: 'Witty social sketches and anecdotes revealing human habits through the sharp observations of al-Jahiz.',
+    episodes: { 'bukhala-complete': 'The Book of Misers' },
+  },
+  'sindbad-bahri': {
+    title: 'The Voyages of Sinbad the Sailor',
+    author: 'From One Thousand and One Nights',
+    period: 'Classical Arabic story tradition',
+    genreLabel: 'Adventure tales',
+    description: 'The seven voyages of Sinbad the Sailor, across strange islands, distant seas, and wondrous creatures.',
+    episodes: { 'sindbad-journeys': 'The Seven Voyages' },
+  },
 }
 
 export const quoteTranslations: Record<string, { lines: string[]; author: string; work: string }> = {
