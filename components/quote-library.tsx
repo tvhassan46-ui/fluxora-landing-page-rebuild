@@ -80,8 +80,6 @@ export function QuoteLibrary() {
               <button type="button" className="copy-quote-button" onClick={() => void shareQuote(lines)}>
                 <Share2 aria-hidden="true" /> {locale === 'ar' ? 'شارك' : 'Share'}
               </button>
-                {locale === 'ar' ? 'ترجم' : 'Translate'}
-              </button>
             </article>
           )
         })}
