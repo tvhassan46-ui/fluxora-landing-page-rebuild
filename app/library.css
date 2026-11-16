@@ -32,3 +32,46 @@
 .clubs-page .library-footer{margin-top:0}
 @media(max-width:860px){.reading-club-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.reading-club-grid{grid-template-columns:1fr}.reading-club-card{min-height:285px}.clubs-hero{padding-top:96px}}
+
+
+/* LIVA reading progress and achievement system */
+.chapter-complete-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;margin:28px 0 8px;padding:12px 18px;border:1px solid #ff9b6a80;border-radius:999px;background:#ff6a0017;color:#ffd3bd;font-size:13px;font-weight:650;transition:background .2s ease,transform .2s ease}
+.chapter-complete-button:hover{transform:translateY(-2px);background:#ff6a0030}
+.chapter-complete-button.is-complete{border-color:#75c99b80;background:#145b3930;color:#a5ecc5}
+.chapter-complete-button svg{width:16px;height:16px}
+.progress-hero{max-width:1100px;margin:0 auto;padding:clamp(100px,13vw,160px) var(--gutter) 58px}
+.progress-hero h1{margin-top:22px;font-family:var(--font-display);font-size:clamp(2.9rem,7.5vw,6.3rem);font-weight:550;line-height:.95;letter-spacing:-.05em}
+.progress-hero h1 em{font-family:var(--font-italic);font-weight:400}
+.progress-hero>p{max-width:600px;margin-top:20px;color:var(--ink-soft);line-height:1.8}
+.progress-summary,.progress-badges,.progress-history{max-width:1100px;margin:0 auto;padding:0 var(--gutter)}
+.progress-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.progress-summary article{display:grid;gap:12px;padding:22px;border:1px solid var(--hair);border-radius:18px;background:linear-gradient(145deg,#ffffff0d,#ffffff02)}
+.progress-summary span{color:var(--ink-faint);font-size:13px}
+.progress-summary strong{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);line-height:1;font-weight:600}
+.progress-badges{margin-top:56px}
+.progress-section-title{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}
+.progress-section-title h2{font-family:var(--font-display);font-size:24px;font-weight:550}
+.progress-section-title>span{color:var(--ink-faint);font-size:12px}
+.progress-badge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.progress-badge{display:grid;justify-items:start;gap:10px;min-height:150px;padding:18px;border:1px solid var(--hair);border-radius:16px;background:#ffffff05;opacity:.58}
+.progress-badge.is-unlocked{opacity:1;border-color:#ffad7d88;background:linear-gradient(145deg,#ff6a001a,#ffffff03)}
+.progress-badge>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#ffffff0d;color:#ffb18a}
+.progress-badge svg{width:20px;height:20px}
+.progress-badge strong{font-size:14px;font-weight:600}
+.progress-badge small{color:var(--ink-faint);font-size:11px}
+.progress-history{margin-top:58px;margin-bottom:28px}
+.progress-section-title button{padding:8px 12px;border:1px solid var(--hair);border-radius:999px;color:var(--ink-soft);font-size:12px}
+.progress-section-title button:disabled{opacity:.35;cursor:not-allowed}
+.progress-history ul{display:grid;border-top:1px solid var(--hair)}
+.progress-history li{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--hair)}
+.progress-history li>svg{flex:none;width:18px;height:18px;color:#83d3a6}
+.progress-history li>span{display:grid;gap:3px;min-width:0}
+.progress-history li strong{font-size:14px;font-weight:550}
+.progress-history li small{color:var(--ink-faint);font-size:12px}
+.progress-history li time{margin-inline-start:auto;flex:none;color:var(--ink-faint);font-size:11px}
+.progress-empty{display:grid;justify-items:center;gap:14px;padding:38px;border:1px dashed var(--hair);border-radius:18px;text-align:center;color:var(--ink-soft)}
+.progress-empty>svg{width:34px;height:34px;color:#ffb18a}
+.progress-empty p{max-width:440px;font-size:13px;line-height:1.7}
+.progress-empty a{display:inline-flex;align-items:center;gap:8px;color:#ffb18a;font-size:13px}
+.progress-storage-note{max-width:1100px;margin:0 auto 50px;padding:0 var(--gutter);color:var(--ink-faint);font-size:11px}
+@media(max-width:760px){.progress-summary{grid-template-columns:1fr}.progress-summary article{grid-template-columns:1fr auto;align-items:center}.progress-summary strong{grid-column:2;grid-row:1}.progress-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
