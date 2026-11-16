@@ -11,6 +11,7 @@ import { useLanguage } from '@/components/language-provider'
 import { getLibraryCopy } from '@/lib/library-copy'
 import { bookTranslations } from '@/lib/reader-translations'
 import { speakInBrowser } from '@/lib/browser-speech'
+import { ChapterCompletionControl } from '@/components/reading-progress'
 
 type PublicLibraryProps = { collection: 'books' | 'novels' | 'stories' }
 type Selection = { bookId: string; episodeId: string }
@@ -180,6 +181,8 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
           <Link href="/novels" aria-current={collection === 'novels' ? 'page' : undefined}>{copy.nav.novels}</Link>
           <Link href="/stories" aria-current={collection === 'stories' ? 'page' : undefined}>{copy.nav.stories}</Link>
           <Link href="/quotes">{copy.nav.quotes}</Link>
+          <Link href="/clubs">{locale === 'ar' ? 'نوادي القراءة' : 'Clubs'}</Link>
+          <Link href="/progress">{locale === 'ar' ? 'إنجازاتي' : 'Progress'}</Link>
         </nav>
         <div className="library-header-actions"><LanguageSwitch /><Link className="library-home-link" href="/">{copy.homeLabel} <ArrowLeft aria-hidden="true" /></Link></div>
       </header>
@@ -289,6 +292,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                   {locale === 'en' && <p className="audio-status" role="note">For a full translation, use your browser’s built-in Translate page feature. LIVA does not rely on a limited free translation API.</p>}
                   {displayedParagraphs.map((paragraph, index) => <p key={`${chapterIndex}-ar-${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
                 </div>
+                {activeBook && activeEpisode && <ChapterCompletionControl id={`${activeBook.id}:${activeEpisode.id}:${chapterIndex}`} title={activeBookTitle} detail={`${activeEpisodeTitle} · ${copy.chapter} ${chapterIndex + 1}`} />}
                 <footer className="reader-source">
                   <span>{copy.sourceDisclosure}</span>
                   <a href={data.sourceUrl} target="_blank" rel="noreferrer">{locale === 'ar' ? data.sourceTitle : copy.originalSource} <ExternalLink aria-hidden="true" /></a>
