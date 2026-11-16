@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-import { gateway, generateText } from 'ai'
 import { NextResponse } from 'next/server'
 import { publicBooks } from '@/lib/reader-catalog'
 import { translateArabicToEnglish } from '@/lib/translation'
@@ -12,97 +10,6 @@ type WikisourceParseResponse = {
 }
 
 export const maxDuration = 60
-
-const translationCache = new Map<string, { translation: string; expiresAt: number }>()
-const TRANSLATION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
-
-async function translateViaFallback(sourceText: string): Promise<string> {
-  return translateArabicToEnglish(sourceText)
-}
-
-export async function POST(request: Request, { params }: RouteContext) {
-  const { bookId } = await params
-  const book = publicBooks.find((item) => item.id === bookId)
-
-  if (!book) {
-    return NextResponse.json({ error: 'Book not found' }, { status: 404 })
-  }
-
-  const body = (await request.json().catch(() => null)) as { text?: unknown } | null
-  const sourceText = typeof body?.text === 'string' ? body.text.trim() : ''
-
-  if (!sourceText) {
-    return NextResponse.json({ error: 'Text is required' }, { status: 400 })
-  }
-
-  if (sourceText.length > 25000) {
-    return NextResponse.json({ error: 'Text is too long to translate in one request' }, { status: 413 })
-  }
-
-  const cacheKey = createHash('sha256').update(sourceText).digest('hex')
-  const cachedTranslation = translationCache.get(cacheKey)
-  if (cachedTranslation && cachedTranslation.expiresAt > Date.now()) {
-    return NextResponse.json(
-      { translation: cachedTranslation.translation },
-      {
-        headers: { 'Cache-Control': 'private, max-age=21600', 'X-Translation-Cache': 'HIT' },
-      },
-    )
-  }
-
-  let translation = ''
-
-  // Use the AI provider when configured; otherwise go directly to the no-key fallback.
-  if (process.env.AI_GATEWAY_API_KEY) {
-    try {
-      const { text } = await generateText({
-        model: gateway('google/gemini-3.8-flash'),
-        system:
-          'You are a careful Arabic-to-English literary translator. Translate the provided Arabic text faithfully into clear English. Preserve paragraph breaks, names, imagery, and meaning. Do not summarize, omit, or add commentary. Return only the English translation.',
-        prompt: sourceText,
-        maxOutputTokens: 8192,
-      })
-
-      if (text?.trim()) translation = text.trim()
-    } catch (aiError) {
-      console.warn('AI Gateway translation failed, attempting server-side fallback:', aiError)
-    }
-  }
-
-  // 2. If AI translation was unavailable or failed, use server-side fallback
-  if (!translation) {
-    try {
-      translation = await translateViaFallback(sourceText)
-    } catch (fallbackError) {
-      console.error('All translation services failed:', fallbackError)
-    }
-  }
-
-  if (!translation.trim()) {
-    return NextResponse.json(
-      { error: 'Translation is temporarily unavailable. Please try again.' },
-      { status: 502 },
-    )
-  }
-
-  const finalTranslation = translation.trim()
-  translationCache.set(cacheKey, {
-    translation: finalTranslation,
-    expiresAt: Date.now() + TRANSLATION_CACHE_TTL_MS,
-  })
-
-  if (translationCache.size > 48) {
-    const oldestKey = translationCache.keys().next().value
-    if (oldestKey) translationCache.delete(oldestKey)
-  }
-
-  return NextResponse.json(
-    { translation: finalTranslation },
-    {
-      headers: { 'Cache-Control': 'private, max-age=21600', 'X-Translation-Cache': 'MISS' },
-    },
-  )
-}
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { bookId } = await params
