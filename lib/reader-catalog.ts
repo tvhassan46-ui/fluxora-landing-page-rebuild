@@ -3,6 +3,7 @@ export type ReaderEpisode = {
   title: string
   pageId?: number
   section?: number
+  pageTitle?: string
 }
 
 export type PublicBook = {
@@ -15,6 +16,7 @@ export type PublicBook = {
   description: string
   coverImage: string
   pageId?: number
+  pageTitle?: string
   sourceTitle: string
   sourceUrl: string
   episodes: ReaderEpisode[]
