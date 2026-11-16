@@ -12,6 +12,9 @@ export const dynamic = 'force-dynamic'
 const rooms = {
   quotes: 'quote-lounge',
   community: 'reader-community',
+  'club-arabic-classics': 'club:arabic-classics',
+  'club-poetry-circle': 'club:poetry-circle',
+  'club-short-stories': 'club:short-stories',
 } as const
 
 const maxMessageLength = 1200
@@ -33,7 +36,7 @@ const allowedMediaTypes = new Map([
 type RoomKey = keyof typeof rooms
 
 function getRoomKey(value: string | null): RoomKey | null {
-  return value === 'community' || value === 'quotes' ? value : null
+  return value && Object.prototype.hasOwnProperty.call(rooms, value) ? value as RoomKey : null
 }
 
 async function getSignedInUser() {
