@@ -12,5 +12,5 @@ When a reader clicks the translation control, the text is translated directly wi
 
 - The translation endpoint is `POST /api/library/[bookId]`.
 - If Vercel AI Gateway / Gemini (`AI_GATEWAY_API_KEY`) is configured, high-quality literary translation is used.
-- If AI Gateway is not configured, automatic server-side translation is used as a fallback.
+- If AI Gateway is not configured or unavailable, the server tries Google Translate and then MyMemory as a secondary provider. Both fallback providers run server-side; the reader never calls them directly from the browser.
 - Clicking the button again toggles back to the original Arabic text instantly.
