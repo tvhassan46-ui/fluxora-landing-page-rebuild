@@ -55,13 +55,12 @@ export function speakInBrowser(
   const voices = synthesis.getVoices()
   const prefix = language === 'ar' ? 'ar' : 'en'
   const preferredVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix))
-    ?? voices.find((voice) => voice.default)
 
   let completedChunks = 0
   let started = false
   let failed = false
 
-  const utterances = chunks.map((chunk, index) => {
+  const utterances = chunks.map((chunk) => {
     const utterance = new SpeechSynthesisUtterance(chunk)
     utterance.lang = language === 'ar' ? 'ar-SA' : 'en-US'
     if (preferredVoice) utterance.voice = preferredVoice
