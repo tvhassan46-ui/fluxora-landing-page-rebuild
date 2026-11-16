@@ -3,21 +3,20 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Check, Copy, ExternalLink, Quote } from 'lucide-react'
+import { ArrowLeft, Check, Copy, ExternalLink, Quote, Share2 } from 'lucide-react'
 import { publicQuotes } from '@/lib/reader-catalog'
 import { LanguageSwitch } from '@/components/language-switch'
 import { useLanguage } from '@/components/language-provider'
 import { QuoteChat } from '@/components/quote-chat'
 import { getQuotesCopy } from '@/lib/quotes-copy'
 import { quoteTranslations } from '@/lib/reader-translations'
+import { speakInBrowser } from '@/lib/browser-speech'
 
 export function QuoteLibrary() {
   const { locale } = useLanguage()
   const copy = getQuotesCopy(locale)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [translatedQuotes, setTranslatedQuotes] = useState<Record<string, string>>({})
-  const [translatingId, setTranslatingId] = useState<string | null>(null)
-  const [translationError, setTranslationError] = useState<string | null>(null)
+  const [voiceError, setVoiceError] = useState('')
 
   async function copyQuote(id: string, lines: string[]) {
     try {
@@ -28,56 +27,37 @@ export function QuoteLibrary() {
     }
   }
 
-  async function listenQuote(lines: string[]) {
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: lines.join('\n'), language: locale }),
-      })
-      if (!response.ok) return
-      const blob = await response.blob()
-      await new Audio(URL.createObjectURL(blob)).play()
-    } catch {
-      // Ignore playback and network errors without affecting the quote card.
+  function listenQuote(lines: string[]) {
+    setVoiceError('')
+    const utterance = speakInBrowser(lines.join(' '), locale, {
+      onError: () => setVoiceError(locale === 'ar'
+        ? 'لم يجد المتصفح صوتًا مناسبًا. ثبّت صوتًا عربيًا في إعدادات جهازك.'
+        : 'No suitable voice was found. Install a matching speech voice in your device settings.'),
+    })
+    if (!utterance) {
+      setVoiceError(locale === 'ar' ? 'القراءة الصوتية غير مدعومة في هذا المتصفح.' : 'This browser does not support read-aloud.')
     }
   }
 
-  async function translateQuote(id: string, lines: string[]) {
-    if (translatedQuotes[id]) {
-      setTranslatedQuotes((current) => {
-        const next = { ...current }
-        delete next[id]
-        return next
-      })
-      return
-    }
-
-    setTranslatingId(id)
-    setTranslationError(null)
+  async function shareQuote(lines: string[]) {
+    const url = `${window.location.origin}/quotes`
+    const text = lines.join('\n')
     try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: lines.join('\n') }),
-      })
-      const result = await response.json().catch(() => null) as { translation?: unknown; error?: unknown } | null
-      if (!response.ok || typeof result?.translation !== 'string') {
-        throw new Error(typeof result?.error === 'string' ? result.error : 'Translation failed. Please try again.')
+      if (navigator.share) {
+        await navigator.share({ title: 'LIVA · Literary quote', text, url })
+      } else {
+        await navigator.clipboard.writeText(`${text}\n\n${url}`)
       }
-      setTranslatedQuotes((current) => ({ ...current, [id]: result.translation as string }))
     } catch (error) {
-      setTranslationError(error instanceof Error ? error.message : 'Translation failed. Please try again.')
-    } finally {
-      setTranslatingId(null)
+      if (error instanceof Error && error.name === 'AbortError') return
     }
   }
 
   return (
     <main className="library-page quote-page" dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="library-topbar">
-        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى رواق' : 'Back to Riwaq'}><Image src="/riwaq-mark.svg" alt="" width={32} height={32} className="library-logo-mark" /><span>Riwaq</span></Link>
-        <nav className="library-nav" aria-label={copy.nav.aria}><Link href="/library">{copy.nav.books}</Link><Link href="/novels">{copy.nav.novels}</Link><Link href="/stories">{copy.nav.stories}</Link><Link href="/quotes" aria-current="page">{copy.nav.quotes}</Link></nav>
+        <Link className="library-brand" href="/" aria-label={locale === 'ar' ? 'العودة إلى رواق' : 'Back to LIVA'}><Image src="/liva-mark.svg" alt="" width={32} height={32} className="library-logo-mark" /><span>LIVA</span></Link>
+        <nav className="library-nav" aria-label={copy.nav.aria}><Link href="/library">{copy.nav.books}</Link><Link href="/novels">{copy.nav.novels}</Link><Link href="/stories">{copy.nav.stories}</Link><Link href="/quotes" aria-current="page">{copy.nav.quotes}</Link><Link href="/clubs">{locale === "ar" ? "نوادي القراءة" : "Reading clubs"}</Link><Link href="/progress">{locale === "ar" ? "إنجازاتي" : "Progress"}</Link><Link href="/shelf">{locale === "ar" ? "رفّي" : "My shelf"}</Link></nav>
         <div className="library-header-actions"><LanguageSwitch /><Link className="library-home-link" href="/">{copy.home} <ArrowLeft aria-hidden="true" /></Link></div>
       </header>
       <section className="quotes-hero" aria-labelledby="quotes-title">
@@ -89,8 +69,7 @@ export function QuoteLibrary() {
         {publicQuotes.map((quote, index) => {
           const translated = locale === 'en' ? quoteTranslations[quote.id] : undefined
           const lines = translated?.lines ?? quote.lines
-          const translatedLines = translatedQuotes[quote.id]?.split(/\n+/).map((line) => line.trim()).filter(Boolean)
-          const displayedLines = translatedLines?.length ? translatedLines : lines
+          const displayedLines = lines
           return (
             <article className="quote-card" key={quote.id}>
               <span className="quote-number">0{index + 1}</span>
@@ -104,16 +83,16 @@ export function QuoteLibrary() {
               <button type="button" className="copy-quote-button" onClick={() => void listenQuote(lines)}>
                 {locale === 'ar' ? 'استمع' : 'Listen'}
               </button>
-              <button type="button" className="copy-quote-button" onClick={() => void translateQuote(quote.id, lines)} disabled={translatingId === quote.id}>
-                {locale === 'ar' ? 'ترجم' : 'Translate'}
+              {voiceError && <p className="audio-status" role="alert">{voiceError}</p>}
+              <button type="button" className="copy-quote-button" onClick={() => void shareQuote(lines)}>
+                <Share2 aria-hidden="true" /> {locale === 'ar' ? 'شارك' : 'Share'}
               </button>
-              {translationError && translatingId === null && <p className="audio-status" role="alert">{translationError}</p>}
             </article>
           )
         })}
       </section>
       <QuoteChat />
-      <footer className="library-footer"><Link href="/">Riwaq</Link><span>{copy.footer}</span><Link href="/library">{copy.discoverBooks} <ArrowLeft aria-hidden="true" /></Link></footer>
+      <footer className="library-footer"><Link href="/">LIVA</Link><span>{copy.footer}</span><Link href="/library">{copy.discoverBooks} <ArrowLeft aria-hidden="true" /></Link></footer>
     </main>
   )
 }

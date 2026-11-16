@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { cookies } from 'next/headers'
 import { Manrope, Noto_Sans_Arabic } from 'next/font/google'
@@ -54,7 +53,6 @@ export default async function RootLayout({
       <body className="antialiased">
         <LanguageProvider initialLocale={initialLocale}>
           {children}
-          {process.env.NODE_ENV === 'production' && <Analytics />}
         </LanguageProvider>
       </body>
     </html>

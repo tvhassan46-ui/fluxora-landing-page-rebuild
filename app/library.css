@@ -9,3 +9,96 @@
 .voice-select:hover{background:#eadbc1}
 .voice-select:focus{border-color:#ff8a1f;box-shadow:0 0 0 2px #ff8a1f26}
 @media(max-width:620px){.voice-select{padding:0 8px;font-size:11px;max-width:140px}}
+
+
+/* LIVA reading clubs */
+.clubs-hero{position:relative;max-width:1100px;margin:0 auto;padding:clamp(92px,13vw,156px) var(--gutter) 64px}
+.clubs-hero h1{max-width:800px;margin-top:22px;font-family:var(--font-display);font-size:clamp(3rem,8vw,6.8rem);font-weight:550;line-height:.93;letter-spacing:-.055em}
+.clubs-hero h1 em{font-family:var(--font-italic);font-weight:400}
+.clubs-hero>p{max-width:580px;margin-top:22px;color:var(--ink-soft);font-size:16px;line-height:1.8}
+.reading-club-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1100px;margin:0 auto 100px;padding:0 var(--gutter)}
+.reading-club-card{position:relative;display:flex;min-height:330px;flex-direction:column;align-items:flex-start;padding:26px;border:1px solid var(--hair);border-radius:22px;background:linear-gradient(155deg,#ffffff0c,#ffffff02);overflow:hidden;transition:transform .3s ease,border-color .3s ease,background .3s ease}
+.reading-club-card:hover{transform:translateY(-6px);border-color:#ff9b6a88;background:linear-gradient(155deg,#ff6a001b,#ffffff04)}
+.reading-club-number{color:var(--ink-faint);font-size:12px;letter-spacing:.16em}
+.reading-club-icon{display:grid;place-items:center;width:64px;height:64px;margin:28px 0 20px;border:1px solid var(--hair);border-radius:19px;background:#ffffff0a;font-size:34px;color:#ffb18a;box-shadow:0 14px 45px #0004}
+.reading-club-category{color:#ffb18a;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.reading-club-card strong{margin-top:8px;font-family:var(--font-display);font-size:25px;line-height:1.15;font-weight:550;letter-spacing:-.03em}
+.reading-club-description{margin-top:12px;color:var(--ink-soft);font-size:13px;line-height:1.7}
+.reading-club-enter{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:22px;color:#ffb18a;font-size:13px;font-weight:600}
+.reading-club-enter svg,.clubs-back-link svg{width:16px;height:16px}
+.clubs-back-link{display:inline-flex;align-items:center;gap:8px;margin-top:22px;padding:10px 15px;border:1px solid var(--hair);border-radius:999px;color:#ffbf9b;font-size:13px}
+.clubs-room-hero{padding-bottom:35px}
+.clubs-page .quote-chat{max-width:1100px;margin:0 auto 80px}
+.clubs-page .library-footer{margin-top:0}
+@media(max-width:860px){.reading-club-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.reading-club-grid{grid-template-columns:1fr}.reading-club-card{min-height:285px}.clubs-hero{padding-top:96px}}
+
+
+/* LIVA reading progress and achievement system */
+.chapter-complete-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;margin:28px 0 8px;padding:12px 18px;border:1px solid #ff9b6a80;border-radius:999px;background:#ff6a0017;color:#ffd3bd;font-size:13px;font-weight:650;transition:background .2s ease,transform .2s ease}
+.chapter-complete-button:hover{transform:translateY(-2px);background:#ff6a0030}
+.chapter-complete-button.is-complete{border-color:#75c99b80;background:#145b3930;color:#a5ecc5}
+.chapter-complete-button svg{width:16px;height:16px}
+.progress-hero{max-width:1100px;margin:0 auto;padding:clamp(100px,13vw,160px) var(--gutter) 58px}
+.progress-hero h1{margin-top:22px;font-family:var(--font-display);font-size:clamp(2.9rem,7.5vw,6.3rem);font-weight:550;line-height:.95;letter-spacing:-.05em}
+.progress-hero h1 em{font-family:var(--font-italic);font-weight:400}
+.progress-hero>p{max-width:600px;margin-top:20px;color:var(--ink-soft);line-height:1.8}
+.progress-summary,.progress-badges,.progress-history{max-width:1100px;margin:0 auto;padding:0 var(--gutter)}
+.progress-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.progress-summary article{display:grid;gap:12px;padding:22px;border:1px solid var(--hair);border-radius:18px;background:linear-gradient(145deg,#ffffff0d,#ffffff02)}
+.progress-summary span{color:var(--ink-faint);font-size:13px}
+.progress-summary strong{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);line-height:1;font-weight:600}
+.progress-badges{margin-top:56px}
+.progress-section-title{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}
+.progress-section-title h2{font-family:var(--font-display);font-size:24px;font-weight:550}
+.progress-section-title>span{color:var(--ink-faint);font-size:12px}
+.progress-badge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.progress-badge{display:grid;justify-items:start;gap:10px;min-height:150px;padding:18px;border:1px solid var(--hair);border-radius:16px;background:#ffffff05;opacity:.58}
+.progress-badge.is-unlocked{opacity:1;border-color:#ffad7d88;background:linear-gradient(145deg,#ff6a001a,#ffffff03)}
+.progress-badge>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#ffffff0d;color:#ffb18a}
+.progress-badge svg{width:20px;height:20px}
+.progress-badge strong{font-size:14px;font-weight:600}
+.progress-badge small{color:var(--ink-faint);font-size:11px}
+.progress-history{margin-top:58px;margin-bottom:28px}
+.progress-section-title button{padding:8px 12px;border:1px solid var(--hair);border-radius:999px;color:var(--ink-soft);font-size:12px}
+.progress-section-title button:disabled{opacity:.35;cursor:not-allowed}
+.progress-history ul{display:grid;border-top:1px solid var(--hair)}
+.progress-history li{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--hair)}
+.progress-history li>svg{flex:none;width:18px;height:18px;color:#83d3a6}
+.progress-history li>span{display:grid;gap:3px;min-width:0}
+.progress-history li strong{font-size:14px;font-weight:550}
+.progress-history li small{color:var(--ink-faint);font-size:12px}
+.progress-history li time{margin-inline-start:auto;flex:none;color:var(--ink-faint);font-size:11px}
+.progress-empty{display:grid;justify-items:center;gap:14px;padding:38px;border:1px dashed var(--hair);border-radius:18px;text-align:center;color:var(--ink-soft)}
+.progress-empty>svg{width:34px;height:34px;color:#ffb18a}
+.progress-empty p{max-width:440px;font-size:13px;line-height:1.7}
+.progress-empty a{display:inline-flex;align-items:center;gap:8px;color:#ffb18a;font-size:13px}
+.progress-storage-note{max-width:1100px;margin:0 auto 50px;padding:0 var(--gutter);color:var(--ink-faint);font-size:11px}
+@media(max-width:760px){.progress-summary{grid-template-columns:1fr}.progress-summary article{grid-template-columns:1fr auto;align-items:center}.progress-summary strong{grid-column:2;grid-row:1}.progress-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* LIVA personal shelf and sharing */
+.book-social-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.book-social-actions button{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid var(--hair);border-radius:999px;color:var(--ink-soft);font-size:11px;transition:border-color .2s ease,color .2s ease,background .2s ease}
+.book-social-actions button:hover,.book-social-actions button[aria-pressed=true]{border-color:#ff9b6a80;color:#ffd2ba;background:#ff6a0014}
+.book-social-actions svg{width:14px;height:14px}
+.shelf-hero{max-width:1100px;margin:0 auto;padding:clamp(100px,13vw,155px) var(--gutter) 52px}
+.shelf-hero h1{margin-top:18px;font-family:var(--font-display);font-size:clamp(2.8rem,7vw,5.8rem);font-weight:550;letter-spacing:-.05em;line-height:.98}
+.shelf-hero p{margin-top:18px;color:var(--ink-soft);line-height:1.7}
+.shelf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:1100px;margin:0 auto 90px;padding:0 var(--gutter)}
+.shelf-card{display:flex;align-items:center;gap:20px;min-width:0;padding:18px;border:1px solid var(--hair);border-radius:18px;background:#ffffff05}
+.shelf-cover{position:relative;display:block;flex:none;width:96px;height:140px;overflow:hidden;border-radius:8px;background:#24100a;box-shadow:0 12px 26px #0006}
+.shelf-cover img{object-fit:cover}
+.shelf-card>div{display:grid;gap:9px;min-width:0}
+.shelf-card strong{font-family:var(--font-display);font-size:18px;line-height:1.2}
+.shelf-card small{color:var(--ink-faint);font-size:12px}
+.shelf-card>div>div{display:flex;align-items:center;gap:12px;margin-top:8px}
+.shelf-card>div>div a{color:#ffb18a;font-size:12px;font-weight:600}
+.shelf-card button{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--hair);border-radius:50%;color:var(--ink-soft)}
+.shelf-card button svg{width:14px;height:14px}
+.shelf-empty{display:grid;justify-items:center;gap:14px;max-width:700px;margin:0 auto 100px;padding:50px 25px;border:1px dashed var(--hair);border-radius:22px;text-align:center}
+.shelf-empty>svg{width:38px;height:38px;color:#ffb18a}
+.shelf-empty h2{font-family:var(--font-display);font-size:26px}
+.shelf-empty p{max-width:430px;color:var(--ink-soft);font-size:13px;line-height:1.7}
+.shelf-empty a{margin-top:6px;color:#ffb18a;font-size:13px;font-weight:650}
+@media(max-width:700px){.shelf-grid{grid-template-columns:1fr}.shelf-card{gap:14px}.shelf-cover{width:80px;height:118px}}

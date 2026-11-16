@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { del, put } from '@vercel/blob'
 import { and, desc, eq, gt } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
@@ -13,10 +12,13 @@ export const dynamic = 'force-dynamic'
 const rooms = {
   quotes: 'quote-lounge',
   community: 'reader-community',
+  'club-arabic-classics': 'club:arabic-classics',
+  'club-poetry-circle': 'club:poetry-circle',
+  'club-short-stories': 'club:short-stories',
 } as const
 
 const maxMessageLength = 1200
-const maxAttachmentBytes = 4 * 1024 * 1024
+const maxAttachmentBytes = 2.5 * 1024 * 1024
 const allowedMediaTypes = new Map([
   ['image/jpeg', 'jpg'],
   ['image/png', 'png'],
@@ -34,7 +36,7 @@ const allowedMediaTypes = new Map([
 type RoomKey = keyof typeof rooms
 
 function getRoomKey(value: string | null): RoomKey | null {
-  return value === 'community' || value === 'quotes' ? value : null
+  return value && Object.prototype.hasOwnProperty.call(rooms, value) ? value as RoomKey : null
 }
 
 async function getSignedInUser() {
@@ -79,7 +81,7 @@ export async function GET(request: Request) {
       body: message.body,
       mediaType: message.mediaType,
       mediaUrl: message.mediaPath
-        ? `/api/quotes/messages/media?${new URLSearchParams({ pathname: message.mediaPath })}`
+        ? `/api/quotes/messages/media?id=${encodeURIComponent(message.id)}`
         : null,
       createdAt: message.createdAt.toISOString(),
       isOwn: message.userId === user.id,
@@ -121,7 +123,7 @@ export async function POST(request: Request) {
   }
   if (!body && !file) return NextResponse.json({ error: 'Write a message or attach a file.' }, { status: 400 })
   if (file && file.size > maxAttachmentBytes) {
-    return NextResponse.json({ error: 'Attachments must be 4 MB or smaller.' }, { status: 413 })
+    return NextResponse.json({ error: 'Attachments must be 2.5 MB or smaller.' }, { status: 413 })
   }
 
   const contentType = file?.type.split(';')[0].toLowerCase()
@@ -143,17 +145,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please wait before sending another message.' }, { status: 429 })
   }
 
-  let uploadedPath: string | null = null
   try {
-    if (file && contentType && extension) {
-      const path = `quote-chat/${randomUUID()}/${randomUUID()}.${extension}`
-      const uploaded = await put(path, file, {
-        access: 'private',
-        addRandomSuffix: false,
-        contentType,
-      })
-      uploadedPath = uploaded.pathname
-    }
+    const mediaData = file && contentType
+      ? `data:${contentType};base64,${Buffer.from(await file.arrayBuffer()).toString('base64')}`
+      : null
 
     const [message] = await db
       .insert(quoteMessages)
@@ -163,7 +158,7 @@ export async function POST(request: Request) {
         userId: user.id,
         userName: user.name,
         body,
-        mediaPath: uploadedPath,
+        mediaPath: mediaData,
         mediaType: contentType ?? null,
       })
       .returning()
@@ -175,20 +170,13 @@ export async function POST(request: Request) {
         body: message.body,
         mediaType: message.mediaType,
         mediaUrl: message.mediaPath
-          ? `/api/quotes/messages/media?${new URLSearchParams({ pathname: message.mediaPath })}`
+          ? `/api/quotes/messages/media?id=${encodeURIComponent(message.id)}`
           : null,
         createdAt: message.createdAt.toISOString(),
         isOwn: true,
       },
     }, { status: 201 })
   } catch (error) {
-    if (uploadedPath) {
-      try {
-        await del(uploadedPath)
-      } catch (cleanupError) {
-        console.error('Failed to clean up an unused chat attachment:', cleanupError)
-      }
-    }
     console.error('Failed to send chat message:', error)
     return NextResponse.json({ error: 'Unable to send message.' }, { status: 500 })
   }

@@ -26,7 +26,7 @@ export function CommunityPage() {
           <Link href="/novels">{quoteCopy.nav.novels}</Link>
           <Link href="/stories">{quoteCopy.nav.stories}</Link>
           <Link href="/quotes">{quoteCopy.nav.quotes}</Link>
-          <Link href="/community" aria-current="page">{chatCopy.communityTitle}</Link>
+          <Link href="/community" aria-current="page">{chatCopy.communityTitle}</Link><Link href="/clubs">{locale === 'ar' ? 'نوادي القراءة' : 'Reading clubs'}</Link><Link href="/progress">{locale === 'ar' ? 'إنجازاتي' : 'Progress'}</Link><Link href="/shelf">{locale === 'ar' ? 'رفّي' : 'My shelf'}</Link>
         </nav>
         <div className="library-header-actions">
           <LanguageSwitch />

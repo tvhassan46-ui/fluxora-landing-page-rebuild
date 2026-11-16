@@ -1,16 +1,19 @@
-# LIVA Voice and In-Page Translation Setup
+# LIVA zero-API reader setup
 
-## 1. Edge TTS Read-Aloud (Arabic & English)
+LIVA's reader no longer calls hosted AI, translation, or text-to-speech providers.
 
-The reader sends text to `POST /api/tts`. The server uses `@travisvn/edge-tts` and returns `audio/mpeg`; no API key or Vercel environment variable is required. The default Arabic voice is `ar-SA-HamedNeural`, with additional Arabic and English voices available in the reader dropdown.
+## Read aloud
 
-The API runs on the Node.js runtime, which is compatible with Vercel serverless functions. It validates the requested language and voice, caches generated audio briefly in memory, and returns a clear error response if the Edge service is unavailable.
+The reader and quote cards use the browser's built-in `SpeechSynthesis` API. It does not require a provider account, API key, billing account, or per-character quota. The available voices depend on the visitor's browser and operating system; LIVA cannot install voices on a visitor's device.
 
-## 2. In-Page Arabic-to-English Translation
+## Translation
 
-When a reader clicks the translation control, the text is translated directly within the reader on the same page.
+Automatic chapter translation is intentionally not provided by the app because a dependable, unlimited, hosted translation service is not available for free. The original Arabic text remains accessible, and English visitors can use their browser's built-in page-translation feature when it is available. Selected quote translations and book descriptions that are already part of the code remain available.
 
-- The translation endpoint is `POST /api/library/[bookId]`.
-- If Vercel AI Gateway / Gemini (`AI_GATEWAY_API_KEY`) is configured, high-quality literary translation is used.
-- If AI Gateway is not configured, automatic server-side translation is used as a fallback.
-- Clicking the button again toggles back to the original Arabic text instantly.
+## Chat attachments
+
+Chat images and audio notes are stored in the existing PostgreSQL `quote_messages.media_path` text field as data URLs. This removes the separate Vercel Blob token. Attachments are limited to 2.5 MB to keep requests within serverless request-size constraints. Database storage and provider quotas still apply.
+
+## Required environment
+
+Authentication and persistent community data still need `DATABASE_URL` and `BETTER_AUTH_SECRET`. These are application configuration values, not paid AI API tokens.

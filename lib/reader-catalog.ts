@@ -3,6 +3,7 @@ export type ReaderEpisode = {
   title: string
   pageId?: number
   section?: number
+  pageTitle?: string
 }
 
 export type PublicBook = {
@@ -15,6 +16,7 @@ export type PublicBook = {
   description: string
   coverImage: string
   pageId?: number
+  pageTitle?: string
   sourceTitle: string
   sourceUrl: string
   episodes: ReaderEpisode[]
@@ -114,6 +116,103 @@ export const publicBooks: PublicBook[] = [
       { id: 'first-part-27', title: 'ذات الصفا', section: 27 },
       { id: 'first-part-28', title: 'العجّاج', section: 28 },
     ],
+  },
+  {
+    id: 'tawq-al-hamama',
+    title: 'طوق الحمامة',
+    author: 'ابن حزم الأندلسي',
+    period: 'القرن الخامس الهجري',
+    genre: 'literary-journey',
+    genreLabel: 'رسالة أدبية',
+    description: 'رسالة أندلسية رفيعة في الحب وأحواله وعلاماته، تمزج التأمل الإنساني بالسرد والشعر.',
+    coverImage: '/book-covers/tawq-al-hamama.svg',
+    pageTitle: 'طوق الحمامة',
+    sourceTitle: 'طوق الحمامة',
+    sourceUrl: 'https://ar.wikisource.org/wiki/طوق_الحمامة',
+    episodes: [
+      { id: 'letters-structure', title: 'تقسيم الرسالة', pageTitle: 'طوق الحمامة/تقسيم الرسالة' },
+      { id: 'union', title: 'الوصل', pageTitle: 'طوق الحمامة/الوصل' },
+      { id: 'contentment', title: 'القنوع', pageTitle: 'طوق الحمامة/القنوع' },
+    ],
+  },
+  {
+    id: 'tuhfat-al-nuzzar',
+    title: 'تحفة النظار في غرائب الأمصار وعجائب الأسفار',
+    author: 'ابن بطوطة',
+    period: 'القرن الثامن الهجري',
+    genre: 'literary-journey',
+    genreLabel: 'رحلة جغرافية',
+    description: 'رحلة ابن بطوطة من طنجة عبر البلدان والمدن، وما سجّله من مشاهد وعادات وأخبار.',
+    coverImage: '/book-covers/tuhfat-al-nuzzar.svg',
+    pageTitle: 'تحفة النظار في غرائب الأمصار وعجائب الأسفار/الجزء الأول',
+    sourceTitle: 'تحفة النظار في غرائب الأمصار وعجائب الأسفار / الجزء الأول',
+    sourceUrl: 'https://ar.wikisource.org/wiki/تحفة_النظار_في_غرائب_الأمصار_وعجائب_الأسفار/الجزء_الأول',
+    episodes: [{ id: 'first-journey', title: 'الجزء الأول' }],
+  },
+  {
+    id: 'maqamat-hariri',
+    title: 'مقامات الحريري',
+    author: 'القاسم بن علي الحريري',
+    period: 'القرن السادس الهجري',
+    genre: 'novel',
+    genreLabel: 'مقامات قصصية',
+    description: 'حكايات الحارث بن همّام وأبي زيد السروجي، في أسفار ومواقف تجمع السرد والبلاغة والطرافة.',
+    coverImage: '/book-covers/maqamat-hariri.svg',
+    pageTitle: 'مقامات الحريري',
+    sourceTitle: 'مقامات الحريري',
+    sourceUrl: 'https://ar.wikisource.org/wiki/مقامات_الحريري',
+    episodes: [
+      { id: 'hariri-haramiyya', title: 'المقامة الحرامية', pageTitle: 'مقامات الحريري/المقامة الحرامية' },
+      { id: 'hariri-omaniyya', title: 'المقامة العمانية', pageTitle: 'مقامات الحريري/المقامة العمانية' },
+      { id: 'hariri-maghribiyya', title: 'المقامة المغربية', pageTitle: 'مقامات الحريري/المقامة المغربية' },
+      { id: 'hariri-makkiyya', title: 'المقامة المكية', pageTitle: 'مقامات الحريري/المقامة المكية' },
+    ],
+  },
+  {
+    id: 'maqamat-badi',
+    title: 'مقامات بديع الزمان الهمذاني',
+    author: 'بديع الزمان الهمذاني',
+    period: 'القرن الرابع الهجري',
+    genre: 'novel',
+    genreLabel: 'مقامات أدبية',
+    description: 'مواقف أبي الفتح الإسكندري كما يرويها عيسى بن هشام، بلغة عربية نابضة بالمفارقة والذكاء.',
+    coverImage: '/book-covers/maqamat-badi.svg',
+    pageTitle: 'بديع الزمان الهمذاني',
+    sourceTitle: 'مقامات بديع الزمان الهمذاني',
+    sourceUrl: 'https://ar.wikisource.org/wiki/بديع_الزمان_الهمذاني',
+    episodes: [
+      { id: 'badi-saymariyya', title: 'المقامة الصيمرية', pageTitle: 'مقامات بديع الزمان الهمذاني/المقامة الصيمرية' },
+      { id: 'badi-shiraziyya', title: 'المقامة الشيرازية', pageTitle: 'مقامات بديع الزمان الهمذاني/المقامة الشيرازية' },
+      { id: 'badi-nuhaydiyya', title: 'المقامة النهيدية', pageTitle: 'مقامات بديع الزمان الهمذاني/المقامة النهيدية' },
+    ],
+  },
+  {
+    id: 'al-bukhala',
+    title: 'البخلاء',
+    author: 'أبو عثمان الجاحظ',
+    period: 'القرن الثالث الهجري',
+    genre: 'story-collection',
+    genreLabel: 'نوادر وحكايات',
+    description: 'مشاهد اجتماعية ساخرة ونوادر تكشف طبائع الناس وعاداتهم بأسلوب الجاحظ الذكي.',
+    coverImage: '/book-covers/al-bukhala.svg',
+    pageTitle: 'البخلاء',
+    sourceTitle: 'البخلاء',
+    sourceUrl: 'https://ar.wikisource.org/wiki/البخلاء',
+    episodes: [{ id: 'bukhala-complete', title: 'البخلاء' }],
+  },
+  {
+    id: 'sindbad-bahri',
+    title: 'السندباد البحري',
+    author: 'من حكايات ألف ليلة وليلة',
+    period: 'التراث القصصي العربي',
+    genre: 'story-collection',
+    genreLabel: 'رحلات ومغامرات',
+    description: 'الرحلات السبع للسندباد البحري، بين الجزر الغريبة والبحار والمخلوقات العجيبة.',
+    coverImage: '/book-covers/sindbad.svg',
+    pageTitle: 'ألف ليلة وليلة/السندباد البحري',
+    sourceTitle: 'ألف ليلة وليلة / السندباد البحري',
+    sourceUrl: 'https://ar.wikisource.org/wiki/ألف_ليلة_وليلة/السندباد_البحري',
+    episodes: [{ id: 'sindbad-journeys', title: 'الرحلات السبع' }],
   },
 ]
 
