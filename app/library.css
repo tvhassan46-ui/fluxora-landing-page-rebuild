@@ -9,3 +9,26 @@
 .voice-select:hover{background:#eadbc1}
 .voice-select:focus{border-color:#ff8a1f;box-shadow:0 0 0 2px #ff8a1f26}
 @media(max-width:620px){.voice-select{padding:0 8px;font-size:11px;max-width:140px}}
+
+
+/* LIVA reading clubs */
+.clubs-hero{position:relative;max-width:1100px;margin:0 auto;padding:clamp(92px,13vw,156px) var(--gutter) 64px}
+.clubs-hero h1{max-width:800px;margin-top:22px;font-family:var(--font-display);font-size:clamp(3rem,8vw,6.8rem);font-weight:550;line-height:.93;letter-spacing:-.055em}
+.clubs-hero h1 em{font-family:var(--font-italic);font-weight:400}
+.clubs-hero>p{max-width:580px;margin-top:22px;color:var(--ink-soft);font-size:16px;line-height:1.8}
+.reading-club-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1100px;margin:0 auto 100px;padding:0 var(--gutter)}
+.reading-club-card{position:relative;display:flex;min-height:330px;flex-direction:column;align-items:flex-start;padding:26px;border:1px solid var(--hair);border-radius:22px;background:linear-gradient(155deg,#ffffff0c,#ffffff02);overflow:hidden;transition:transform .3s ease,border-color .3s ease,background .3s ease}
+.reading-club-card:hover{transform:translateY(-6px);border-color:#ff9b6a88;background:linear-gradient(155deg,#ff6a001b,#ffffff04)}
+.reading-club-number{color:var(--ink-faint);font-size:12px;letter-spacing:.16em}
+.reading-club-icon{display:grid;place-items:center;width:64px;height:64px;margin:28px 0 20px;border:1px solid var(--hair);border-radius:19px;background:#ffffff0a;font-size:34px;color:#ffb18a;box-shadow:0 14px 45px #0004}
+.reading-club-category{color:#ffb18a;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.reading-club-card strong{margin-top:8px;font-family:var(--font-display);font-size:25px;line-height:1.15;font-weight:550;letter-spacing:-.03em}
+.reading-club-description{margin-top:12px;color:var(--ink-soft);font-size:13px;line-height:1.7}
+.reading-club-enter{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:22px;color:#ffb18a;font-size:13px;font-weight:600}
+.reading-club-enter svg,.clubs-back-link svg{width:16px;height:16px}
+.clubs-back-link{display:inline-flex;align-items:center;gap:8px;margin-top:22px;padding:10px 15px;border:1px solid var(--hair);border-radius:999px;color:#ffbf9b;font-size:13px}
+.clubs-room-hero{padding-bottom:35px}
+.clubs-page .quote-chat{max-width:1100px;margin:0 auto 80px}
+.clubs-page .library-footer{margin-top:0}
+@media(max-width:860px){.reading-club-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.reading-club-grid{grid-template-columns:1fr}.reading-club-card{min-height:285px}.clubs-hero{padding-top:96px}}
