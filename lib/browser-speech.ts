@@ -6,9 +6,40 @@ type SpeechCallbacks = {
   onError?: (error: SpeechSynthesisErrorEvent) => void
 }
 
+function splitForSpeech(text: string, maxLength = 180): string[] {
+  const normalized = text.replace(/[\u200b\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return []
+
+  const chunks: string[] = []
+  let current = ''
+
+  for (const word of normalized.split(' ')) {
+    if (word.length > maxLength) {
+      if (current) chunks.push(current)
+      current = ''
+      for (let offset = 0; offset < word.length; offset += maxLength) {
+        chunks.push(word.slice(offset, offset + maxLength))
+      }
+      continue
+    }
+
+    const candidate = current ? `${current} ${word}` : word
+    if (candidate.length > maxLength && current) {
+      chunks.push(current)
+      current = word
+    } else {
+      current = candidate
+    }
+  }
+
+  if (current) chunks.push(current)
+  return chunks
+}
+
 /**
  * Uses speech voices already exposed by the visitor's browser/operating system.
- * No remote service, API key, usage quota, or per-character billing is involved.
+ * Long passages are split into short utterances to avoid browser speech limits.
+ * No remote service, API key, account, usage quota, or per-character billing is involved.
  */
 export function speakInBrowser(
   text: string,
@@ -17,21 +48,47 @@ export function speakInBrowser(
 ): SpeechSynthesisUtterance | null {
   if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text.trim()) return null
 
-  const utterance = new SpeechSynthesisUtterance(text)
+  const chunks = splitForSpeech(text)
+  if (!chunks.length) return null
+
+  const synthesis = window.speechSynthesis
+  const voices = synthesis.getVoices()
   const prefix = language === 'ar' ? 'ar' : 'en'
-  const voices = window.speechSynthesis.getVoices()
-  const preferredVoice = voices.find((voice) => voice.lang.toLowerCase() === (language === 'ar' ? 'ar' : 'en-us'))
-    ?? voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix))
+  const preferredVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix))
+    ?? voices.find((voice) => voice.default)
 
-  utterance.lang = language === 'ar' ? 'ar' : 'en-US'
-  if (preferredVoice) utterance.voice = preferredVoice
-  utterance.rate = 0.94
-  utterance.pitch = 1
-  utterance.onstart = callbacks.onStart ?? null
-  utterance.onend = callbacks.onEnd ?? null
-  utterance.onerror = (event) => callbacks.onError?.(event)
+  let completedChunks = 0
+  let started = false
+  let failed = false
 
-  window.speechSynthesis.cancel()
-  window.speechSynthesis.speak(utterance)
-  return utterance
+  const utterances = chunks.map((chunk, index) => {
+    const utterance = new SpeechSynthesisUtterance(chunk)
+    utterance.lang = language === 'ar' ? 'ar-SA' : 'en-US'
+    if (preferredVoice) utterance.voice = preferredVoice
+    utterance.rate = 0.92
+    utterance.pitch = 1
+    utterance.volume = 1
+
+    utterance.onstart = () => {
+      if (!started) {
+        started = true
+        callbacks.onStart?.()
+      }
+    }
+    utterance.onend = () => {
+      completedChunks += 1
+      if (completedChunks === chunks.length && !failed) callbacks.onEnd?.()
+    }
+    utterance.onerror = (event) => {
+      if (event.error === 'canceled' || event.error === 'interrupted' || failed) return
+      failed = true
+      callbacks.onError?.(event)
+    }
+
+    return utterance
+  })
+
+  synthesis.cancel()
+  for (const utterance of utterances) synthesis.speak(utterance)
+  return utterances[0] ?? null
 }
