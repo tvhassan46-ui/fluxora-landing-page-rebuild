@@ -30,7 +30,7 @@ type MessagesResponse = {
 
 type ApiError = { error?: string }
 
-const maxMediaBytes = 4 * 1024 * 1024
+const maxMediaBytes = 2.5 * 1024 * 1024
 const allowedMediaTypes = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a',
