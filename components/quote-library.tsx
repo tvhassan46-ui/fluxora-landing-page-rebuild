@@ -10,14 +10,12 @@ import { useLanguage } from '@/components/language-provider'
 import { QuoteChat } from '@/components/quote-chat'
 import { getQuotesCopy } from '@/lib/quotes-copy'
 import { quoteTranslations } from '@/lib/reader-translations'
+import { speakInBrowser } from '@/lib/browser-speech'
 
 export function QuoteLibrary() {
   const { locale } = useLanguage()
   const copy = getQuotesCopy(locale)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [translatedQuotes, setTranslatedQuotes] = useState<Record<string, string>>({})
-  const [translatingId, setTranslatingId] = useState<string | null>(null)
-  const [translationError, setTranslationError] = useState<string | null>(null)
 
   async function copyQuote(id: string, lines: string[]) {
     try {
@@ -28,49 +26,11 @@ export function QuoteLibrary() {
     }
   }
 
-  async function listenQuote(lines: string[]) {
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: lines.join('\n'), language: locale }),
-      })
-      if (!response.ok) return
-      const blob = await response.blob()
-      await new Audio(URL.createObjectURL(blob)).play()
-    } catch {
-      // Ignore playback and network errors without affecting the quote card.
-    }
-  }
-
-  async function translateQuote(id: string, lines: string[]) {
-    if (translatedQuotes[id]) {
-      setTranslatedQuotes((current) => {
-        const next = { ...current }
-        delete next[id]
-        return next
-      })
-      return
-    }
-
-    setTranslatingId(id)
-    setTranslationError(null)
-    try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: lines.join('\n') }),
-      })
-      const result = await response.json().catch(() => null) as { translation?: unknown; error?: unknown } | null
-      if (!response.ok || typeof result?.translation !== 'string') {
-        throw new Error(typeof result?.error === 'string' ? result.error : 'Translation failed. Please try again.')
-      }
-      setTranslatedQuotes((current) => ({ ...current, [id]: result.translation as string }))
-    } catch (error) {
-      setTranslationError(error instanceof Error ? error.message : 'Translation failed. Please try again.')
-    } finally {
-      setTranslatingId(null)
-    }
+  function listenQuote(lines: string[]) {
+    const utterance = speakInBrowser(lines.join(' '), locale, {
+      onError: () => { /* Browser/OS speech availability varies by device. */ },
+    })
+    if (!utterance) return
   }
 
   return (
@@ -89,8 +49,7 @@ export function QuoteLibrary() {
         {publicQuotes.map((quote, index) => {
           const translated = locale === 'en' ? quoteTranslations[quote.id] : undefined
           const lines = translated?.lines ?? quote.lines
-          const translatedLines = translatedQuotes[quote.id]?.split(/\n+/).map((line) => line.trim()).filter(Boolean)
-          const displayedLines = translatedLines?.length ? translatedLines : lines
+          const displayedLines = lines
           return (
             <article className="quote-card" key={quote.id}>
               <span className="quote-number">0{index + 1}</span>
@@ -104,10 +63,8 @@ export function QuoteLibrary() {
               <button type="button" className="copy-quote-button" onClick={() => void listenQuote(lines)}>
                 {locale === 'ar' ? 'استمع' : 'Listen'}
               </button>
-              <button type="button" className="copy-quote-button" onClick={() => void translateQuote(quote.id, lines)} disabled={translatingId === quote.id}>
                 {locale === 'ar' ? 'ترجم' : 'Translate'}
               </button>
-              {translationError && translatingId === null && <p className="audio-status" role="alert">{translationError}</p>}
             </article>
           )
         })}
