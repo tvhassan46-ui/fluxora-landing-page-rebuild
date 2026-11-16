@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { gateway, generateText } from 'ai'
 import { NextResponse } from 'next/server'
 import { publicBooks } from '@/lib/reader-catalog'
+import { translateArabicToEnglish } from '@/lib/translation'
 
 type RouteContext = { params: Promise<{ bookId: string }> }
 
@@ -16,38 +17,7 @@ const translationCache = new Map<string, { translation: string; expiresAt: numbe
 const TRANSLATION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
 
 async function translateViaFallback(sourceText: string): Promise<string> {
-  const paragraphs = sourceText.split(/\n{2,}/)
-  const translatedParagraphs: string[] = []
-
-  for (const para of paragraphs) {
-    const trimmed = para.trim()
-    if (!trimmed) continue
-
-    const endpoint = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&ie=UTF-8&oe=UTF-8&q=${encodeURIComponent(trimmed)}`
-    const response = await fetch(endpoint, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-      cache: 'no-store',
-    })
-
-    if (!response.ok) {
-      throw new Error(`Fallback translation failed with status ${response.status}`)
-    }
-
-    const data = (await response.json()) as unknown[]
-    if (!Array.isArray(data?.[0])) throw new Error('Translation response had an unexpected format.')
-    const paraText = (data[0] as unknown[])
-      .filter((chunk): chunk is [string] => Array.isArray(chunk) && typeof chunk[0] === 'string')
-      .map((chunk) => chunk[0])
-      .join('')
-      .trim()
-    if (!paraText) throw new Error('Translation response was empty.')
-    translatedParagraphs.push(paraText)
-  }
-
-  return translatedParagraphs.join('\n\n')
+  return translateArabicToEnglish(sourceText)
 }
 
 export async function POST(request: Request, { params }: RouteContext) {
