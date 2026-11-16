@@ -19,14 +19,15 @@ export async function GET(request: Request, { params }: RouteContext) {
   const episodeId = new URL(request.url).searchParams.get('episode')
   const episode = book.episodes.find((item) => item.id === episodeId) ?? book.episodes[0]
   const pageId = episode.pageId ?? book.pageId
+  const pageTitle = episode.pageTitle ?? book.pageTitle
 
-  if (!pageId) {
+  if (!pageId && !pageTitle) {
     return NextResponse.json({ error: 'Text is unavailable' }, { status: 404 })
   }
 
   const query = new URLSearchParams({
     action: 'parse',
-    pageid: String(pageId),
+    ...(pageTitle ? { page: pageTitle } : { pageid: String(pageId) }),
     prop: 'text',
     format: 'json',
   })
