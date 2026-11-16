@@ -25,6 +25,8 @@ export function ReadingWorld() {
         <div className="reading-world-actions">
           <Link href="/library">{isArabic ? 'اكتشف المكتبة' : 'Explore the library'} <ArrowUpRight aria-hidden="true" /></Link>
           <Link href="/clubs">{isArabic ? 'انضم إلى نادٍ' : 'Join a reading club'} <BookOpen aria-hidden="true" /></Link>
+          <Link href="/progress">{isArabic ? 'تابع إنجازاتك' : 'Track your progress'} <Sparkles aria-hidden="true" /></Link>
+          <Link href="/shelf">{isArabic ? 'رفّي الشخصي' : 'My saved shelf'} <BookOpen aria-hidden="true" /></Link>
         </div>
       </div>
       <div className="reading-world-stage" aria-label={isArabic ? 'أغلفة كتب في مشهد ثلاثي الأبعاد' : 'Book covers in a 3D scene'}>
