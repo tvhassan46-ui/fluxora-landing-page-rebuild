@@ -12,6 +12,7 @@ import { getLibraryCopy } from '@/lib/library-copy'
 import { bookTranslations } from '@/lib/reader-translations'
 import { speakInBrowser } from '@/lib/browser-speech'
 import { ChapterCompletionControl } from '@/components/reading-progress'
+import { BookSocialActions } from '@/components/book-social-actions'
 
 type PublicLibraryProps = { collection: 'books' | 'novels' | 'stories' }
 type Selection = { bookId: string; episodeId: string }
@@ -183,6 +184,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
           <Link href="/quotes">{copy.nav.quotes}</Link>
           <Link href="/clubs">{locale === 'ar' ? 'نوادي القراءة' : 'Clubs'}</Link>
           <Link href="/progress">{locale === 'ar' ? 'إنجازاتي' : 'Progress'}</Link>
+          <Link href="/shelf">{locale === 'ar' ? 'رفّي' : 'My shelf'}</Link>
         </nav>
         <div className="library-header-actions"><LanguageSwitch /><Link className="library-home-link" href="/">{copy.homeLabel} <ArrowLeft aria-hidden="true" /></Link></div>
       </header>
@@ -227,6 +229,7 @@ export function PublicLibrary({ collection }: PublicLibraryProps) {
                       {copy.originalSource} <ExternalLink aria-hidden="true" />
                     </a>
                   </div>
+                  <BookSocialActions bookId={book.id} title={title} href={`/${collection === 'books' ? 'library' : collection}`} />
                 </div>
               </article>
             )
