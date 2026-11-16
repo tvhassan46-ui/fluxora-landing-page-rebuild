@@ -16,6 +16,7 @@ export function QuoteLibrary() {
   const { locale } = useLanguage()
   const copy = getQuotesCopy(locale)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [voiceError, setVoiceError] = useState('')
 
   async function copyQuote(id: string, lines: string[]) {
     try {
@@ -27,10 +28,15 @@ export function QuoteLibrary() {
   }
 
   function listenQuote(lines: string[]) {
+    setVoiceError('')
     const utterance = speakInBrowser(lines.join(' '), locale, {
-      onError: () => { /* Browser/OS speech availability varies by device. */ },
+      onError: () => setVoiceError(locale === 'ar'
+        ? 'لم يجد المتصفح صوتًا مناسبًا. ثبّت صوتًا عربيًا في إعدادات جهازك.'
+        : 'No suitable voice was found. Install a matching speech voice in your device settings.'),
     })
-    if (!utterance) return
+    if (!utterance) {
+      setVoiceError(locale === 'ar' ? 'القراءة الصوتية غير مدعومة في هذا المتصفح.' : 'This browser does not support read-aloud.')
+    }
   }
 
   async function shareQuote(lines: string[]) {
@@ -77,6 +83,7 @@ export function QuoteLibrary() {
               <button type="button" className="copy-quote-button" onClick={() => void listenQuote(lines)}>
                 {locale === 'ar' ? 'استمع' : 'Listen'}
               </button>
+              {voiceError && <p className="audio-status" role="alert">{voiceError}</p>}
               <button type="button" className="copy-quote-button" onClick={() => void shareQuote(lines)}>
                 <Share2 aria-hidden="true" /> {locale === 'ar' ? 'شارك' : 'Share'}
               </button>
